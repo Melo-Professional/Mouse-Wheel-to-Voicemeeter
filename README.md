@@ -7,7 +7,7 @@ This is an AutoHotKey script to control volume strips (virtual inputs) from Voic
 Voicemeeter
 
 The initial Voicemeeter version has one virtual inputs, then taskbar will have a single whole area from where you can scroll wheel mouse to control audio volume.
-So you can control it's volume from anywhere in taskbar.
+So you can control its volume from anywhere in taskbar.
 
 Voicemeeter Banana
 
