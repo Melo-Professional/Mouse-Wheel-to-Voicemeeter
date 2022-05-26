@@ -37,4 +37,4 @@ VMR AHK https://github.com/SaifAqqad/VMR.ahk
 
 trismarck code from here: https://www.autohotkey.com/board/topic/96139-detect-screen-edges-two-monitors/
 
-Voicemeeter by Vincent Brunel
+Voicemeeter by Vincent Burel
