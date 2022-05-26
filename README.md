@@ -24,6 +24,13 @@ You can control the first virtual input volume from left side of taskbar, contro
 It will automatically detect Voicemeeter version currently running and apply the number of areas accordingly.
 
 
+How to use
+
+Just download all files from this repository into the same folder (directory). No install needed. Run 'Mouse Wheel to Voicemeeter.exe' program. It will place a system tray icon from where you will have some usefull options.
+
+
+
+
 Credits to:
 
 VMR AHK https://github.com/SaifAqqad/VMR.ahk
