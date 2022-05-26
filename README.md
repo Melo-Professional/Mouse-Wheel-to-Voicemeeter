@@ -22,3 +22,12 @@ You can control the first virtual input volume from left side of taskbar, contro
 
 
 It will automatically detect Voicemeeter version currently running and apply the number of areas accordingly.
+
+
+Credits to:
+
+VMR AHK https://github.com/SaifAqqad/VMR.ahk
+
+trismarck code from here: https://www.autohotkey.com/board/topic/96139-detect-screen-edges-two-monitors/
+
+Voicemeeter by Vincent Brunel
