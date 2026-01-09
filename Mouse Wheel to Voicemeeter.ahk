@@ -1,231 +1,214 @@
-﻿; Mouse Wheel to Voicemeeter
-; version 1.3
+﻿#Requires AutoHotkey v2.0
+; Mouse Wheel to Voicemeeter
+; version 2.0
 ; by Melo (melo@meloprofessional.com)
 ; 
 ; Credits to:
 ; VMR AHK https://github.com/SaifAqqad/VMR.ahk
 ; trismarck code from here: https://www.autohotkey.com/board/topic/96139-detect-screen-edges-two-monitors/
- 
-
-
-
-MacroButtonMuteUnmuteVirtualInput:=[]
-; CUSTOMIZATION START
-; Your macro button ID for mute / unmute 1st virtual input, if any
-MacroButtonMuteUnmuteVirtualInput[1] :=
-
-; Your macro button ID for mute / unmute 2nd virtual input, if any
-MacroButtonMuteUnmuteVirtualInput[2] :=
-
-; Your macro button ID for mute / unmute 3rd virtual input, if any
-MacroButtonMuteUnmuteVirtualInput[3] :=
-
-; Slow steps for changing volume
-gainsteps1 := 3
-
-; Fast steps for changing volume
-gainsteps2 := 12
-; CUSTOMIZATION END 
- 
-
-
-
-SetWorkingDir %A_ScriptDir%
-#SingleInstance Force
-#MaxThreadsPerHotkey 200
-;OPTIMIZATIONS START
-#NoEnv
-#MaxHotkeysPerInterval 99000000
-#HotkeyInterval 99000000
-#KeyHistory 0
-ListLines Off
-Process, Priority, , A
-SetBatchLines, -1
-SetKeyDelay, -1, -1
-SetMouseDelay, -1
-SetDefaultMouseSpeed, 0
-SetWinDelay, -1
-SetControlDelay, -1
-SendMode Input
-;OPTIMIZATIONS END
 
 Appname := "Mouse Wheel to Voicemeeter"
-Version := 1.3
-;stripnum := stripdesktop
-directionup := false
-gainsteps := gainsteps1
-global x
-global Appname
-global Version
-global voicemeeter
+Version := 2.0
+gainsteps1 := 3
+gainsteps2 := 12
 
-Coordmode, Mouse, Screen
-SM_CMONITORS := 80
-SysGet, monCount, % SM_CMONITORS
-Loop, % monCount
-	SysGet, mon%A_Index%, Monitor, %A_Index%
-Menu, Tray, Icon, %A_ScriptDir%\mwvm.ico
-Menu, Tray, Tip , WAITING VOICEMEETER...
-Menu, Tray, NoStandard
-Menu, Tray, deleteall
-Menu, Tray, Add, Waiting for Voicemeeter start, opener	
-Menu, Tray, Default, 1&
-Menu, Tray, Click, 1
-Menu, Tray, Rename, 1&
-Menu, Tray, Add, --- Waiting Voicemeeter --- , opener
-Menu, Tray, Disable, --- Waiting Voicemeeter ---
-Menu, Tray, Add, Voicemeeter , Voice_Meeter
-Menu, Tray, Disable, Voicemeeter
-Menu, Tray, Add, Restart Audio Engine , Voice_Meeter_Restart
-Menu, Tray, Disable, Restart Audio Engine
-Menu, Tray, Add, Macro Buttons , Macro_Buttons
-Menu, Tray, Disable, Macro Buttons
-Menu, Tray, Add
-Menu, Tray, Add, Control Panel Sounds , Sounds
-Menu, Tray, Add, Windows Volume Mixer , Volume_Mixer
-Menu, Tray, Add
-Menu, Tray, Add, Start on Boot, BootMenu
-If (CheckStartOnBoot())
-	Menu, Tray, Check, Start on Boot
-else
-	Menu, Tray, Uncheck, Start on Boot
-Menu, Tray, Add, Restart , Restart
-Menu, Tray, Add, About, About
-Menu, Tray, Add, Exit, Exit
-Menu, Tray, Click, 1
+MacroButtonMuteUnmuteVirtualInput := Map()
+; CUSTOMIZATION START - Set your macro mute button IDs as shown in the Macro Buttons UI
 
-Loop
-{
-	try
-	{
-		#Include %A_ScriptDir%\VMR.ahk
-		break
-	}
-	catch
-		sleep 1000
+MacroButtonMuteUnmuteVirtualInput[1] := 23
+MacroButtonMuteUnmuteVirtualInput[2] := 30
+MacroButtonMuteUnmuteVirtualInput[3] := 45
+; CUSTOMIZATION END
+
+SetWorkingDir(A_ScriptDir)
+#SingleInstance Force
+
+CoordMode("Mouse", "Screen")
+
+monCount := MonitorGetCount()
+mon := Map()
+Loop monCount {
+    MonitorGet(A_Index, &Left, &Top, &Right, &Bottom)
+    mon[A_Index] := {Left: Left, Top: Top, Right: Right, Bottom: Bottom}
 }
 
-Menu, Tray, Tip , %Appname%
-Menu, Tray, Delete, --- Waiting Voicemeeter ---
-Menu, Tray, Enable, Voicemeeter
-Menu, Tray, Enable, Restart Audio Engine
-Menu, Tray, Enable, Macro Buttons
+TraySetIcon(A_ScriptDir "\mwvm.ico")
+A_IconTip := "Initializing..."
+Tray := A_TrayMenu
+Tray.Delete()
 
-voicemeeter := new VMR().login()
-vm_type := voicemeeter.getType()
-;vm_type := 3
-
-Fader := []
-Switch vm_type {
-    case 1:
-        Fader[1]:= 3
-        Fader[2]:=
-        Fader[3]:=
-    case 2:
-        Fader[1]:= 4
-        Fader[2]:= 5
-        Fader[3]:=
-    case 3:
-        Fader[1]:= 6
-        Fader[2]:= 7
-        Fader[3]:= 8
+; === MENU FUNCTIONS ===
+opener(*) {
+    Tray.Show()
 }
-Total_Faders := Fader.MaxIndex()
-Return
-
-opener:
-Menu, Tray, Show
-return
-
-CheckStartOnBoot(){
-RegRead, StartupReg, HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run, %Appname%
-return StartupReg
+Voice_Meeter(*) {
+    voicemeeter.command.show()
 }
-
-Sounds:
-runwait control mmsys.cpl sounds
-Return
-
-Volume_Mixer:
-runwait sndvol.exe
-Return
-
-Voice_Meeter:
-voicemeeter.command.show(1)
-return
-
-Voice_Meeter_Restart:
-voicemeeter.command.restart()
-return
-
-Macro_Buttons:
-voicemeeter.macroButton.show(1)
-return
-
-BootMenu:
-If (CheckStartOnBoot()){
-	RegDelete, HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run, %Appname%
-	Menu, Tray, Uncheck, Start on Boot
-}else{
-	RegWrite, REG_SZ, HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run, %Appname%, %A_AhkPath%
-	Menu, Tray, Check, Start on Boot
+Voice_Meeter_Restart(*) {
+    voicemeeter.command.restart()
 }
-Return
-
-Restart:
-Reload
-Return
-
-About:
-MsgBox ,,%Appname%,Mouse Wheel to Voicemeeter`nversion %Version%`n`nTo control Voicemeeter virtual inputs volumes from mouse wheel over Taskbar.`n`n`n`nBy Melo`nmelo@meloprofessional.com`n© Melo. All rights reserved.
-return
-
-Exit:
-ExitApp
-Return
-
-#if MouseIsOver("ahk_class Shell_TrayWnd") || MouseIsOver("ahk_class Shell_SecondaryTrayWnd")
-
-WheelUp::
-directionup := true
-WheelDown::
-If (A_PriorHotKey = A_ThisHotKey and A_TimeSincePriorHotkey < 50)
-	gainsteps := gainsteps2
-else{
-	Loop, % monCount {
-		i := A_Index
-		if ( x >= mon%i%Left ) && ( x <= mon%i%Right )
-			break
-	}
+Macro_Buttons(*) {
+    voicemeeter.macrobutton.Show()
 }
-total_width := mon%i%Right - mon%i%Left
-width := total_width / Total_Faders
-Loop, % Total_Faders {
-	portion := A_Index
-	width_start := mon%i%Left + ((width * portion ) - width)
-	width_end := width_start + width
-	if ( x >= width_start ) && ( x <= width_end )
-		break
+Sounds(*) {
+    Run("control mmsys.cpl sounds")
+}
+Volume_Mixer(*) {
+    Run("sndvol.exe")
+}
+BootMenu(*) {
+    if (CheckStartOnBoot() != "") {
+        RegDelete("HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run", Appname)
+        Tray.Uncheck("Start on Boot")
+    } else {
+        command := A_AhkPath '" "' A_ScriptFullPath '"'
+        RegWrite("REG_SZ", "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run", Appname, command)
+        Tray.Check("Start on Boot")
+    }
+}
+Restart(*) {
+    Reload
+}
+OpenScriptFolder(*) {
+    Run('explorer.exe "' A_ScriptDir '"')
+}
+EditScript(*) {
+    Run(A_ScriptFullPath)
+}
+About(*) {
+    MsgBox(Appname "`nMouse Wheel to Voicemeeter`nversion " Version "`n`nControl Voicemeeter virtual input volumes using the mouse wheel over the taskbar.`n`n`n`nBy Melo`nmelo@meloprofessional.com`n© Melo. All rights reserved.", "About", "OK")
+}
+Exit(*) {
+    ExitApp
 }
 
-stripnum := Fader[portion]
+; === TRAY MENU ===
+Tray.Add("Voicemeeter", Voice_Meeter)
+Tray.Disable("Voicemeeter")
+Tray.Add("Restart Audio Engine", Voice_Meeter_Restart)
+Tray.Disable("Restart Audio Engine")
+Tray.Add("Macro Buttons", Macro_Buttons)
+Tray.Disable("Macro Buttons")
+Tray.Add()
+Tray.Add("Sound Control Panel", Sounds)
+Tray.Add("Windows Volume Mixer", Volume_Mixer)
+Tray.Add()
+Tray.Add("Start on Boot", BootMenu)
+if CheckStartOnBoot()
+    Tray.Check("Start on Boot")
+Tray.Add("Restart Script", Restart)
+Tray.Add()
+InfoMenu := Menu()
+InfoMenu.Add("Open Script Folder", OpenScriptFolder)
+InfoMenu.Add("Edit Script", EditScript)
+InfoMenu.Add("About", About)
+Tray.Add("Info", InfoMenu)
+Tray.Add("Exit", Exit)
 
-if ( directionup ){
-	if(voicemeeter.macroButton.getStatus(MacroButtonMuteUnmuteVirtualInput[portion]))
-		voicemeeter.macroButton.setStatus(MacroButtonMuteUnmuteVirtualInput[portion],1,0)
-	voicemeeter.strip[stripnum].mute := 0
-	voicemeeter.strip[stripnum].gain+=gainsteps
+Tray.Add("Status: Connecting...", opener)
+Tray.Default := "Status: Connecting..."
+
+; === LOAD AND CONNECT ===
+try {
+    #Include VMR.ahk
+} catch as e {
+    MsgBox("Error loading VMR.ahk:`n" e.Message "`n`nMake sure the file is in the same folder and up to date.", Appname, "OK IconX")
+    ExitApp
 }
-else
-	voicemeeter.strip[stripnum].gain-=gainsteps
 
-gainsteps := gainsteps1
-directionup := false
-return
-#If
-
-MouseIsOver(WinTitle)
-{
-MouseGetPos, x, , Win
-Return WinExist(WinTitle . " ahk_id " . Win), x
+try {
+    voicemeeter := VMR().Login()
+} catch as e {
+    MsgBox("Failed to connect to Voicemeeter:`n" e.Message "`n`nRestart the script.", Appname, "OK IconX")
+    ExitApp
 }
+
+Tray.Delete("Status: Connecting...")
+A_IconTip := Appname
+Tray.Enable("Voicemeeter")
+Tray.Enable("Restart Audio Engine")
+Tray.Enable("Macro Buttons")
+
+vm_type_name := voicemeeter.Type.Name
+
+Fader := Map()
+switch vm_type_name {
+    case "Voicemeeter":        Fader[1] := 3
+    case "Voicemeeter Banana": Fader[1] := 4, Fader[2] := 5
+    case "Voicemeeter Potato": Fader[1] := 6, Fader[2] := 7, Fader[3] := 8
+}
+Total_Faders := Fader.Count
+
+CheckStartOnBoot() {
+    try {
+        return RegRead("HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run", Appname)
+    } catch {
+        return ""
+    }
+}
+
+MouseIsOverTaskbar() {
+    MouseGetPos(,, &Win)
+    return WinExist("ahk_class Shell_TrayWnd ahk_id " Win) || WinExist("ahk_class Shell_SecondaryTrayWnd ahk_id " Win)
+}
+
+#HotIf MouseIsOverTaskbar()
+WheelUp::AdjustVolume(true)
+WheelDown::AdjustVolume(false)
+
+AdjustVolume(up) {
+    global gainsteps, x, y
+    MouseGetPos(&x, &y)
+    
+    if (A_ThisHotkey = A_PriorHotkey && A_TimeSincePriorHotkey < 50)
+        gainsteps := gainsteps2
+    else
+        gainsteps := gainsteps1
+
+    i := 1
+    Loop monCount {
+        if (x >= mon[A_Index].Left && x <= mon[A_Index].Right && y >= mon[A_Index].Top && y <= mon[A_Index].Bottom) {
+            i := A_Index
+            break
+        }
+    }
+
+    total_width := mon[i].Right - mon[i].Left
+    width := total_width / Total_Faders
+    portion := 1
+    Loop Total_Faders {
+        width_start := mon[i].Left + (width * A_Index - width)
+        width_end := width_start + width
+        if (x >= width_start && x <= width_end) {
+            portion := A_Index
+            break
+        }
+    }
+
+    stripnum := Fader[portion]
+
+    if (up) {
+        if MacroButtonMuteUnmuteVirtualInput.Has(portion) {
+            uiButtonID := MacroButtonMuteUnmuteVirtualInput[portion]
+            internalButtonID := uiButtonID + 1
+
+            try {
+                currentStatus := voicemeeter.macrobutton.GetStatus(internalButtonID, 0)
+                statusInt := Round(currentStatus)
+
+                if (statusInt = 1) {
+                    voicemeeter.macrobutton.SetStatus(internalButtonID, 0.0)
+                }
+            } catch {
+                ; Silent fail
+            }
+        }
+
+        ; Always unmute the strip directly for reliability
+        voicemeeter.strip[stripnum].mute := false
+        voicemeeter.strip[stripnum].gain += gainsteps
+    } else {
+        voicemeeter.strip[stripnum].gain -= gainsteps
+    }
+}
+#HotIf
