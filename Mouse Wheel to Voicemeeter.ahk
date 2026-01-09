@@ -1,6 +1,6 @@
 ﻿#Requires AutoHotkey v2.0
 ; Mouse Wheel to Voicemeeter
-; version 2.0
+; version 2.1
 ; by Melo (melo@meloprofessional.com)
 ; 
 ; Credits to:
@@ -8,7 +8,7 @@
 ; trismarck code from here: https://www.autohotkey.com/board/topic/96139-detect-screen-edges-two-monitors/
 
 Appname := "Mouse Wheel to Voicemeeter"
-Version := 2.0
+Version := 2.1
 gainsteps1 := 3
 gainsteps2 := 12
 
@@ -58,11 +58,21 @@ Volume_Mixer(*) {
 }
 BootMenu(*) {
     if (CheckStartOnBoot() != "") {
-        RegDelete("HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run", Appname)
+        try {
+            RegDelete("HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run", Appname)
+        } catch as e {
+            MsgBox("Failed to remove start on boot entry:`n" e.Message, Appname, "OK Icon!")
+            return
+        }
         Tray.Uncheck("Start on Boot")
     } else {
-        command := A_AhkPath '" "' A_ScriptFullPath '"'
-        RegWrite("REG_SZ", "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run", Appname, command)
+        command := '"' A_AhkPath '" "' A_ScriptFullPath '"'
+        try {
+            RegWrite command, "REG_SZ", "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run", Appname
+        } catch as e {
+            MsgBox("Failed to add start on boot entry:`n" e.Message, Appname, "OK Icon!")
+            return
+        }
         Tray.Check("Start on Boot")
     }
 }
@@ -143,7 +153,7 @@ CheckStartOnBoot() {
     try {
         return RegRead("HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run", Appname)
     } catch {
-        return ""
+        return ""  ; Return empty string if key/value doesn't exist or error
     }
 }
 
