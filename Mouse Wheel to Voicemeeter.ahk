@@ -1,307 +1,415 @@
+﻿;@region Setup
 ;@region Description
 /************************************************************************
- * @description Control Voicemeeter virtual input volumes using the mouse wheel over the taskbar.
+ * @description Control Voicemeeter virtual Inputs volumes using the mouse wheel over the taskbar.
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/04/03
- * @version 3.0
+ * @date 2026/05/18
+ * @releasedate 2022/05/11
+ * @version 3.57.0
  * @github https://github.com/Melo-Professional/Mouse-Wheel-to-Voicemeeter
  * @credits VMR AHK https://github.com/SaifAqqad/VMR.ahk
  * @credits trismarck code from here: https://www.autohotkey.com/board/topic/96139-detect-screen-edges-two-monitors/
  ***********************************************************************/
 ;@endregion
 
-Appname := "Mouse Wheel to Voicemeeter"
-Version := 3.0
-#Requires AutoHotkey v2.0
-SetWorkingDir(A_ScriptDir)
-#SingleInstance Force
-#Include VMR.ahk
-CoordMode("Mouse", "Screen")
-
-;@Ahk2Exe-SetName Mouse Wheel to Voicemeeter
-;@Ahk2Exe-SetFileVersion 3.0
+;@region Compilation
+;@Ahk2Exe-SetName MouseWheeltoVoicemeeter
+;@Ahk2Exe-SetFileVersion 3.57.0
 ;@Ahk2Exe-SetCopyright © Melo. All rights reserved.
-;@Ahk2Exe-UpdateManifest 1
+;@Ahk2Exe-SetProductName MouseWheeltoVoicemeeter
+;@Ahk2Exe-SetInternalName MouseWheeltoVoicemeeter
+;@Ahk2Exe-SetCompanyName Melo Professional
+;@Ahk2Exe-ExeName MouseWheeltoVoicemeeter
+;@Ahk2Exe-SetMainIcon mwvm.ico
+;@endregion
+
+;@region Directives
+#Requires AutoHotkey v2.0
+#SingleInstance Force
+SetWorkingDir(A_ScriptDir)
+A_IconHidden := true
+CoordMode("Mouse", "Screen")
+;@endregion
 
 ;@region Configuration
-OSDTimeOut := 2000 ; duration of OSD in milliseconds
-OSDBottomDistance := 70 ; OSD distance from bottom
-gainStepsSlow := 3 ; dbs to change when scrolling slow
-gainStepsFast := 12 ; dbs to change when scrolling fast
+App := {
+    Name:                   "Mouse Wheel to Voicemeeter",
+    Description:            "Control Voicemeeter Virtual Inputs volumes using the mouse wheel over the taskbar.",
+    Icon:                   A_IsCompiled ? A_ScriptFullPath : (A_ScriptDir "\mwvm.ico"),
+    Copyright:              "Developed by Melo`nmelo@meloprofessional.com`n©Melo. All rights reserved.",
+    Version:                "3.57.0"
+}
+
+Settings := {
+    ; General GUI
+    SplashScreen:               "Banner",       ; "Icon" / "Banner" / "Disabled"
+    BTDetect:                   true,           ; Restart audio engine wheneve new bluetooth connects
+    WheelSpeed:                 10,
+    DesiredTheme:               "Auto",         ; "Auto" / "Light" / "Dark"
+    GuiFontSizeSmall:           8,
+    GuiFontSizeMedium:          9,
+    GuiFontSizeBig:             10,
+    GuiFontSizeExtraBig:        14,
+    GuiFontName:                "Segoe UI",
+    GuiSplashTimer:             1200,
+
+; GUI Colors
+    Theme: {
+        Dark: {
+            Bg:                 "202020", 
+            TextDefault:        "CCCCCC",
+            TextStrong:         "FFFFFF",
+            TextSmooth:         "888888" 
+        },
+        Light: {
+            Bg:                 "F0F0F0", 
+            TextDefault:        "222222",
+            TextStrong:         "000000",
+            TextSmooth:         "666666" 
+        }
+    }
+}
+;@endregion
+
+;@region Vars
+Debug                       := false
+A_ScriptName                := App.Name
+CurrentActualTheme := "Dark"
+
+gainStepsMin := 2
+gainStepsMax := 20
 
 ; Define the Logical IDs of MacroButtons used to mute/unmute each VoiceMeeter strip.
+; if you dont have, put MacroButtonMuteUnmuteVirtualInput := []
 ; IMPORTANT: The order MUST be:
 ; [1] VoiceMeeter Input
 ; [2] VoiceMeeter AUX
 ; [3] VoiceMeeter VAIO3
+
 MacroButtonMuteUnmuteVirtualInput := [
-    23, ; [1] VoiceMeeter Input strip
-    30, ; [2] VoiceMeeter AUX strip
-    45  ; [3] VoiceMeeter VAIO3 strip
+                            23, ; [1] VoiceMeeter Input strip
+                            30, ; [2] VoiceMeeter AUX strip
+                            45  ; [3] VoiceMeeter VAIO3 strip
 ]
+
+
+OSDSettings := {
+    UseOSD:                     true,
+    Width:                      200,    ; valor correto
+    FontSize:                   9,
+    TimeOut:                    1800,       ; duration of OSD in milliseconds
+    Speed:                      4,          ; Pixels moved per tick (Increase for faster animations)
+    Position:                   "Bottom",   ; Bottom / Top
+    EdgeDistance:               60,         ; OSD distance from screen edge
+    SlideDistance:              23,          ; Set your preferred slide distance here
+    FontName:                   "Segoe UI",
+    FontWeight:                 1000,
+    MarginX:                    16,
+    MarginY:                    12,
+    Opacity:                    255,
+    ColoredBorder:              true,
+    RoundedCorners:             18,
+    ProgressMaxValue:           100,
+
+    ; Theme
+    Theme:                      "Auto", ; "Light" / "Dark" / "Auto"
+
+    ; lightmode
+    TextDefaultLight:           "5a5555",
+    BgColorLight:               "F5F9FB",
+    BorderColorLight:           "ffffff",
+    ProgressFgColorLight:       "0067C0",
+    ProgressBgColorLight:       "EDF1F2", ; HEX or "transparent"
+    ProgressOver100Light:       "FF5555",
+
+    ; darkmode
+    TextDefaultDark:            "d8d8d8",
+    BgColorDark:                "272525",
+    BorderColorDark:            "272525",
+    ProgressFgColorDark:        "4CC2FF",
+    ProgressBgColorDark:        "333333", ; HEX or "transparent"
+    ProgressOver100Dark:        "FF5555",
+
+}
+;SaveToINI := [""] ; what to save to INI file
+SaveToINI := ["Settings.DesiredTheme", "Settings.SplashScreen", "Settings.BTDetect",
+            "Settings.WheelSpeed", "OSDSettings.UseOSD", "OSDSettings.TimeOut",
+            "OSDSettings.Width", "OSDSettings.FontSize", "OSDSettings.Position", 
+            "OSDSettings.TextDefaultLight", "OSDSettings.BgColorLight", "OSDSettings.BorderColorLight",
+            "OSDSettings.ProgressFgColorLight", "OSDSettings.ProgressBgColorLight", "OSDSettings.ProgressOver100Light", 
+            "OSDSettings.TextDefaultDark", "OSDSettings.BgColorDark", "OSDSettings.BorderColorDark", 
+            "OSDSettings.ProgressFgColorDark", "OSDSettings.ProgressBgColorDark", "OSDSettings.ProgressOver100Dark",
+            "OSDSettings.Speed"
+]
+
+ResetOSDSettings    := OSDSettings.Clone()
+ResetSettings       := Settings.Clone()
+
 ;@endregion
 
-;@region Menu
-TraySetIcon(A_ScriptDir "\mwvm.ico")
-A_IconTip := "Initializing..."
-Tray := A_TrayMenu
-Tray.Delete()
+;@region Includes
+#Include <Save_Settings>
+#Include <Theme>
+#Include <Color_Picker_Dialog>
+#Include <MsgBoxCustom>
+#Include <SplashScreen>
+#Include <SplashIcon>
+#Include <About>
+#Include <Menu>
+#Include <App_Funcs>
+#Include <App_Options>
+#Include <OSD_Options>
+#Include <VMR>
+#Include <OSD_Manager>
+;@endregion
 
-; === MENU FUNCTIONS ===
-opener(*) => Tray.Show()
-Voice_Meeter(*) => voicemeeter.command.show()
-Voice_Meeter_Restart(*) => voicemeeter.command.restart()
-Macro_Buttons(*) => voicemeeter.macrobutton.Show()
-Sounds(*) => Run("control mmsys.cpl sounds")
-Volume_Mixer(*) => Run("sndvol.exe")
-BootMenu(*) {
-    if (CheckStartOnBoot() != "") {
-        try {
-            RegDelete("HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run", Appname)
-        } catch as e {
-            MsgBox("Failed to remove start on boot entry:`n" e.Message, Appname, "OK Icon!")
-            return
-        }
-        Tray.Uncheck("Start on Boot")
-    } else {
-        command := '"' A_AhkPath '" "' A_ScriptFullPath '"'
-        try {
-            RegWrite command, "REG_SZ", "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run", Appname
-        } catch as e {
-            MsgBox("Failed to add start on boot entry:`n" e.Message, Appname, "OK Icon!")
-            return
-        }
-        Tray.Check("Start on Boot")
-    }
-}
-Restart(*) {
-    Reload
-}
-OpenScriptFolder(*) => Run('explorer.exe "' A_ScriptDir '"')
-EditScript(*) => Run(A_ScriptFullPath)
-About(*) {
-    MsgBox(
-            Appname "`n"
-            "version " Format("{:.1f}", Version) "`n`n"
-            "Control Voicemeeter virtual input volumes using the mouse wheel over the taskbar.`n`n`n`n"
-            "By Melo`nmelo@meloprofessional.com`n"
-            "©Melo. All rights reserved.", 
-            "About", "OK")
-}
-Repo(*) {
-    Run("https://github.com/Melo-Professional/Mouse-Wheel-to-Voicemeeter")
-}
-Exit(*) {
-    ExitApp
-}
-CheckStartOnBoot() {
-    try {
-        return RegRead("HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run", Appname)
-    } catch {
-        return ""  ; Return empty string if key/value doesn't exist or error
-    }
+;@region Startup
+; SPLASHSCREEN
+switch Settings.SplashScreen {
+    case "Icon": SplashIcon.Show()
+    case "Banner": Splash.Show()
 }
 
-; === TRAY MENU ===
-Tray.Add("Voicemeeter", Voice_Meeter)
-Tray.Disable("Voicemeeter")
-Tray.Add("Restart Audio Engine", Voice_Meeter_Restart)
-Tray.Disable("Restart Audio Engine")
-Tray.Add("Macro Buttons", Macro_Buttons)
-Tray.Disable("Macro Buttons")
-Tray.Add()
-Tray.Add("Sound Control Panel", Sounds)
-Tray.Add("Windows Volume Mixer", Volume_Mixer)
-Tray.Add()
-Tray.Add("Start on Boot", BootMenu)
-if CheckStartOnBoot()
-    Tray.Check("Start on Boot")
-Tray.Add("Restart Script", Restart)
-Tray.Add()
-InfoMenu := Menu()
-InfoMenu.Add("Open Script Folder", OpenScriptFolder)
-InfoMenu.Add("Edit Script", EditScript)
-InfoMenu.Add("About", About)
-InfoMenu.Add("GitHub Repo", Repo)
-Tray.Add("Info", InfoMenu)
-Tray.Add("Exit", Exit)
-Tray.Add("Status: Connecting...", opener)
-Tray.Default := "Status: Connecting..."
+; TRAY ICON + MENU
+StartMenu()
+
+;@endregion
+;@endregion
+
+;@region Login VM
 LoginVMR()
-Tray.Delete("Status: Connecting...")
-A_IconTip := Appname
-Tray.Enable("Voicemeeter")
-Tray.Enable("Restart Audio Engine")
-Tray.Enable("Macro Buttons")
-;@endregion
-
-;@region Login VMR
 LoginVMR() {
-; === CONNECT VMR ===
-	try {
-		Global voicemeeter
-	    voicemeeter := VMR().Login()
-	} catch as e {
-	    MsgBox("Failed to connect to Voicemeeter:`n" e.Message "`n`nRestart the script.", Appname, "OK IconX")
-	    ExitApp
-	}
-}
-vm_type_name := voicemeeter.Type.Name
-;@endregion
+    Global voicemeeter
 
-;@region OSD Start
-global osdGui := ""
-global osdTextCtrl := ""
+    ; Disable some Tray items
+    TrayMenu                := A_TrayMenu
+    TrayMenu.Rename("Mouse Wheel to VM", "Connecting to Voicemeeter")
+    TrayMenu.Disable("Voicemeeter")
+    TrayMenu.Disable("Restart Audio Engine")
+    TrayMenu.Disable("Macro Buttons")
+    TrayMenu.Disable("Restart All")
 
-CreateVolumeOSD() {
-    global osdGui, osdTextCtrl
+    timeout := 10000 ; Total time to keep trying
+    startTime := A_TickCount
+    
+    while (A_TickCount - startTime < timeout) {
+        try {
+            voicemeeter := VMR().Login()
 
-    osdGui := Gui("-Caption +AlwaysOnTop +ToolWindow +E0x20 -DPIScale", "VMR_VolumeOSD")
-    osdGui.BackColor := "2E2E2E"
-    osdGui.MarginX := 20
-    osdGui.MarginY := 18
-    osdGui.SetFont("s12 cFFFFFF w700 q5", "Segoe UI")
-    osdTextCtrl := osdGui.Add("Text", "Center w160", "Strip Name: 100%")
-    osdGui.Show("Hide")
-
-    WinSetTransparent(210, osdGui.Hwnd)
-    ApplyRoundedCorners()
-}
-
-ApplyRoundedCorners() {
-    global osdGui
-
-    if (!IsObject(osdGui))
-        return
-
-    osdGui.GetClientPos(,, &w, &h)
-    if (w > 0 && h > 0) {
-        WinSetRegion("0-0 w" w " h" h " r40-40", osdGui.Hwnd)
+            ; Re enable tray items
+            TrayMenu.Rename("Connecting to Voicemeeter", "Mouse Wheel to VM")
+            TrayMenu.Enable("Voicemeeter")
+            TrayMenu.Enable("Restart Audio Engine")
+            TrayMenu.Enable("Macro Buttons")
+            TrayMenu.Enable("Restart All")
+            return ; Success! Exit the function
+        } catch as err {
+            Sleep(500) ; Wait 0.5s before the next attempt
+        }
     }
-}
 
-CreateVolumeOSD()
+    ; Timeout expired without a successful login
+    switch Settings.SplashScreen {
+        case "Icon": SplashIcon.Destroy()
+        case "Banner": Splash.Destroy()
+    }
+    if (MsgBoxCustom("Failed to connect to Voicemeeter.", App.Name " Error", "RetryCancel", err) = "Retry") {
+        Reload()
+    }
+    ExitApp()
+}
 ;@endregion
 
-;@region Faders Enumeration
-Fader := []
-switch vm_type_name {
-    case "Voicemeeter":     Fader := [3]
-    case "Voicemeeter Banana": Fader := [4, 5]
-    case "Voicemeeter Potato": Fader := [6, 7, 8]
-}
-Total_Faders := Fader.Length
-;@endregion
-
-;@region Monitor Enumeration
+;@region Monitor, Faders and Current Gains
 monCount := MonitorGetCount()
 mon := []
 Loop monCount {
     MonitorGet(A_Index, &Left, &Top, &Right, &Bottom)
     mon.Push({Left: Left, Top: Top, Right: Right, Bottom: Bottom})
 }
+
+Faders := []
+switch voicemeeter.Type.Name {
+    case "Voicemeeter":     Faders := [3]
+    case "Voicemeeter Banana": Faders := [4, 5]
+    case "Voicemeeter Potato": Faders := [6, 7, 8]
+}
+Total_Faders := Faders.Length
+
+ListenAndLastGainValues()
+ListenAndLastGainValues() {
+    global LastGainValues
+
+    LastGainValues := Map()
+    for index, stripIdx in Faders {
+        LastGainValues[stripIdx] := voicemeeter.Strip[stripIdx].Gain
+        if OSDSettings.UseOSD
+            voicemeeter.On("ParametersChanged", CheckVolumeChange.Bind(stripIdx))
+        else
+            voicemeeter.Off("ParametersChanged", CheckVolumeChange.Bind(stripIdx))
+    }
+}
 ;@endregion
 
-;@region Main Logic
-MouseIsOverTaskbar() {
-    MouseGetPos(,, &Win)
-    return WinExist("ahk_class Shell_TrayWnd ahk_id " Win) 
-        || WinExist("ahk_class Shell_SecondaryTrayWnd ahk_id " Win)
+switch Settings.SplashScreen {
+    case "Icon": SplashIcon.Destroy()
+    case "Banner": Splash.Destroy()
 }
 
-#HotIf MouseIsOverTaskbar()
-WheelUp::   AdjustVolume(true)
+;@region OSD
+OSDUpdateColors()
+CreateOSD()
+
+;@endregion
+
+ready := true
+
+;@region HotKeys
+#HotIf MouseIsOverTaskbar() && IsSet(ready)
+WheelUp:: AdjustVolume(true)
 WheelDown:: AdjustVolume(false)
 #HotIf
 
+
+; Ctrl + ScrollLock
+$^sc046:: {
+    Reload()
+}
+
+; Shift + Ctrl + ScrollLock
+$+^sc046:: {
+    RestartAll()
+}
+
+;@endregion
+;@region Mouse Wheel Logic
 AdjustVolume(up) {
-    global gainsteps, x, y
+    global voicemeeter, mon, monCount, Faders, Total_Faders
+    static lastX := -1, lastY := -1, cachedStrip := 1
 
+    ; --- 1. Get Strip by mouse position (with cache) ---
+    mousetolerance := 20 ; Minimum pixels moved before updating strip logic
     MouseGetPos(&x, &y)
-
-    ; Fast scroll
-    if (A_ThisHotkey = A_PriorHotkey && A_TimeSincePriorHotkey < 50)
-        gainsteps := gainStepsFast
-    else
-        gainsteps := gainStepsSlow
-
-    ; Find current monitor
-    currentMonitorIndex := 1
-    Loop monCount {
-        if (x >= mon[A_Index].Left && x <= mon[A_Index].Right
-            && y >= mon[A_Index].Top && y <= mon[A_Index].Bottom) {
-            currentMonitorIndex := A_Index
-            break
-        }
-    }
-
-    ; Find strip index
-    portion := Floor((x - mon[currentMonitorIndex].Left) 
-              / (mon[currentMonitorIndex].Right - mon[currentMonitorIndex].Left) 
-              * Total_Faders) + 1
-    portion := Min(portion, Total_Faders)
-
-    stripnum := Fader[portion]
-
-    ; === Call VoiceMeeter ===
-    if (up) {
-        if MacroButtonMuteUnmuteVirtualInput.Has(portion) {
-            uiButtonID := MacroButtonMuteUnmuteVirtualInput[portion]
-            internalButtonID := uiButtonID + 1
-            try {
-                if (Round(voicemeeter.macrobutton.GetStatus(internalButtonID, 0)) = 1)
-                    voicemeeter.macrobutton.SetStatus(internalButtonID, 0.0)
+    ; Only recalculate monitor/strip if the mouse has moved
+    if (Abs(x - lastX) > mousetolerance || Abs(y - lastY) > mousetolerance) {
+        ;ToolTip(A_TickCount)
+        currentMonitorIndex := 1
+        
+        ; Fallback for loop count
+        loopCount := IsNumber(monCount) ? monCount : 1
+        
+        Loop loopCount {
+            if (x >= mon[A_Index].Left && x <= mon[A_Index].Right
+                && y >= mon[A_Index].Top && y <= mon[A_Index].Bottom) {
+                currentMonitorIndex := A_Index
+                break
             }
         }
-        voicemeeter.strip[stripnum].mute := false
-        voicemeeter.strip[stripnum].gain += gainsteps
+
+        ; Map X coordinate to the specific VoiceMeeter Strip
+        m := mon[currentMonitorIndex]
+        width := Max(1, m.Right - m.Left)
+        portion := Min(Floor((x - m.Left) / width * Total_Faders) + 1, Total_Faders)
+        cachedStrip := Faders[portion]
+        ; Update position cache
+        lastX := x
+        lastY := y
+    }
+    stripnum := cachedStrip
+
+    ; --- 1. WHEEL VELOCITY DETECTION ---
+
+
+    ; Intercept A_TimeSincePriorHotkey to prevent "empty string" errors
+    tsPrior := IsNumber(A_TimeSincePriorHotkey) ? A_TimeSincePriorHotkey : 300
+    invertedacceleration := round(100 / Settings.WheelSpeed)
+
+    ; If timing is invalid (-1) or too long, treat as 300ms (slow)
+    timeSince := (tsPrior == -1) ? 300 : tsPrior
+
+    if (timeSince < 100) {  ; time limit to reset velocity
+        ; ACCELERATION ADJUSTMENT:
+        ; Increasing the divisor makes acceleration milder.
+        ; Example: 20ms scroll -> 1 + ((100 - 20) // 10) = +8 gain
+        acceleration := (100 - timeSince) // invertedacceleration
+        ;acceleration := (75 - timeSince) // invertedacceleration
+        gainsteps := gainStepsMin + acceleration
+        gainsteps := Min(gainsteps, gainStepsMax) ; Cap at maximum
     } else {
-        voicemeeter.strip[stripnum].gain -= gainsteps
+        gainsteps := gainStepsMin
+        ;acceleration := -100
+
+        ; Unmute if volume up
+        if (up && voicemeeter.strip[stripnum].mute) {
+            voicemeeter.strip[stripnum].mute := false
+        }
+
     }
 
-    showStripInfo(stripnum)
+    ; Apply the increment
+    step := up ? gainsteps : -gainsteps
+    voicemeeter.strip[stripnum].Increment("gain", step)
+
+;    ; Feedback ToolTip
+;    ToolTip("acceleration: " acceleration " | Step: " gainsteps)
+;    if gainsteps = 0 
+;        SetTimer(() => ToolTip(), -5000) 
+;    else 
+;        SetTimer(() => ToolTip(), -1000) 
 }
 ;@endregion
 
-;@region OSD Show
-showStripInfo(stripnum) {
-    global osdGui, osdTextCtrl
-    static lastStrip := 0
-    static lastPercent := -1
-    strip := voicemeeter.Strip[stripnum]
-    label := strip["Label"]
-    stripName := (label != "") ? label : strip.Name
+;@region Bluetooth
+; Watch Bluetooth connection - auto restart Voicemeeter
 
-    db := strip.gain
-    percent := (db + 60) / 72 * 100
-    percent := Round(Max(0, Min(100, percent)), 0)
+BT_Toggle()
+BT_Toggle() {
+        if Settings.BTDetect {
+            Sleep(1000)
+            voicemeeter.On(VMRConsts.Events.DevicesUpdated, BT_Trigger)
+        } else {
+            voicemeeter.Off(VMRConsts.Events.DevicesUpdated, BT_Trigger)
+        }
+}
 
-    newText := stripName ": " percent "%"
+BT_Trigger(*) {
+    static counter          := 0
+    static startTime        := 0
+    static lastTriggerTime  := 0
 
-    if (stripnum != lastStrip || percent != lastPercent) {
-        osdTextCtrl.Text := newText
-        lastStrip := stripnum
-        lastPercent := percent
+    BT_Repeats                  := 0
+    BT_MaxSeconds               := 2
+    BT_MaxMilliseconds          := BT_MaxSeconds * 1000
+    BT_Cooldown                 := 5000
+
+
+    currentTime := A_TickCount
+    
+    ; 1. COOLDOWN CHECK
+    ; If we are still within the 'timer' duration since the last trigger, exit immediately
+    if (lastTriggerTime != 0 && (currentTime - lastTriggerTime < BT_Cooldown)) {
+        return 
+    }
+    
+    ; 2. RESET LOGIC
+    ; If this is the first hit or the detection window expired, reset the start point
+    if (counter == 0 || (currentTime - startTime > BT_Cooldown)) {
+        startTime := currentTime
+        counter := 1
+    } else {
+        counter += 1
     }
 
-    osdGui.Show("AutoSize NoActivate")
-    ApplyRoundedCorners()
-
-    osdGui.GetClientPos(,, &guiW, &guiH)
-    x := (A_ScreenWidth - guiW) // 2
-    y := A_ScreenHeight - guiH - OSDBottomDistance
-
-    osdGui.Show("x" x " y" y " NoActivate")
-
-    ; Timer to destroy OSD
-    SetTimer(HideVolumeOSD, 0)
-    SetTimer(HideVolumeOSD, -OSDTimeOut)
+    ; 3. TRIGGER CHECK
+    if (counter > BT_Repeats && (currentTime - startTime <= BT_MaxMilliseconds)) {
+        lastTriggerTime := currentTime ; Start the cooldown clock
+        counter := 0                   ; Reset counter for the next fresh cycle
+        BT_HandleRapidChange()
+    }
 }
 
-HideVolumeOSD(*) {
-    global osdGui
-
-    if (IsObject(osdGui))
-        osdGui.Hide()
+BT_HandleRapidChange() {
+    voicemeeter.Command.Restart()
 }
 ;@endregion
+
