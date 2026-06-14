@@ -1,9 +1,12 @@
-https://github.com/user-attachments/assets/4634b85d-b0fb-4b9b-8f13-9a2bca9d0efc
-
-
 
 # Mouse Wheel to Voicemeeter
 To control Voicemeeter virtual inputs volumes from mouse wheel over Taskbar.
+
+
+
+
+https://github.com/user-attachments/assets/4634b85d-b0fb-4b9b-8f13-9a2bca9d0efc
+
 
 
 
