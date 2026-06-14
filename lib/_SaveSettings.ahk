@@ -1,17 +1,33 @@
 /************************************************************************
  * @description Handles user settings utilizing a standard INI file
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/05/16
- * @version 1.3.0
+ * @date 2026/06/08
+ * @version 1.5.0
  ***********************************************************************/
 
 #Requires AutoHotkey v2.0
 
+
+/*
+HOW TO USE
+
+1 - Include this lib
+#Include *i <_SaveSettings>
+
+2 - Define what to save to INI format: rootName.path
+SaveToINI := ["Settings.DesiredTheme"] ; what to save to INI file
+SaveToINI.Push := ["Settings.SplashScreen"] ; add more to INI file
 RegisterArrayItems(SaveToINI)
+
+3 - Read the current INI
 LoadINI()
 
+4 - Later, to update the INI just run
+SaveINI()
+*/
+
 class INIManager {
-    static IniPath := A_ScriptDir "\" App.Name "_UserSettings.ini"
+    static IniPath := A_ScriptDir "\" App.NameNoSpace "_UserSettings.ini"
     static Registered := Map()
 
     static Register(rootName, path) {

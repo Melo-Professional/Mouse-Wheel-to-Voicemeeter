@@ -1,26 +1,19 @@
 /************************************************************************
- * @description Help GUI
+ * @description App Options
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/05/14
- * @version 1.1.0
+ * @date 2026/05/22
+ * @version 1.2.0
  ***********************************************************************/
 
 #Requires AutoHotkey v2.0
 
 ShowOptionsGUI() {
-    global Settings, ResetSettings
+    global Settings, General
 
     MyGuiTitle := "Options"
 ;    MyGuiOptions := "+LastFound +AlwaysOnTop -MinimizeBox -MaximizeBox"
     MyGuiOptions := "+LastFound -SysMenu"
-
-    ; Check DarkMode
-    if (IsSet(CurrentActualTheme) && CurrentActualTheme == "Dark") {
-        MyGui := DarkGui(MyGuiOptions, MyGuiTitle)
-    } else {
-        MyGui := Gui(MyGuiOptions, MyGuiTitle)
-    }
-
+    MyGui := Gui(MyGuiOptions, MyGuiTitle)
     MyGui.SetFont("s" Settings.GuiFontSizeMedium, Settings.GuiFontName)
 
     ; Define layout constants
@@ -49,9 +42,8 @@ ShowOptionsGUI() {
 
     ; 3. Content
     ; 3.1. SplashScreen
-            SplashScreenList := ["Banner", "Icon", "Disabled"]
             StartingIndex := 1
-            For Index, Value in SplashScreenList {
+            For Index, Value in Settings.SplashScreenList {
                 If (Value = Settings.SplashScreen) {
                     StartingIndex := Index
                     Break
@@ -59,12 +51,12 @@ ShowOptionsGUI() {
             }
 
             MyGui.Add("Text", "xm y+55 w60", "SplashScreen:")
-            optSplash := MyGui.AddDDL("x" GuiWidth - MyGui.MarginX - 80 " yp-3 w80 Choose" . StartingIndex, ["Banner", "Icon", "Disabled"])
+            optSplash := MyGui.AddDDL("x" GuiWidth - MyGui.MarginX - 80 " yp-3 w80 Choose" . StartingIndex, Settings.SplashScreenList)
 
     ; 3.2. Theme (Auto / Light / Dark using a DropDownList)
-            ThemeList := ["Auto", "Light", "Dark"]
+            ;ThemeList := ["Auto", "Light", "Dark"]
             StartingIndex := 1
-            For Index, Value in ThemeList {
+            For Index, Value in Settings.ThemeList {
                 If (Value = Settings.DesiredTheme) {
                     StartingIndex := Index
                     Break
@@ -72,17 +64,17 @@ ShowOptionsGUI() {
             }
 
             MyGui.Add("Text", "xm y+35 w60", "Theme:")
-            optTheme := MyGui.AddDDL("x" GuiWidth - MyGui.MarginX - 80 " yp-3 w80 Choose" . StartingIndex, ["Auto", "Light", "Dark"])
+            optTheme := MyGui.AddDDL("x" GuiWidth - MyGui.MarginX - 80 " yp-3 w80 Choose" . StartingIndex, Settings.ThemeList)
 
     ; 3.3. Wheel Speed
-            MyGui.Add("Text", "xm y+35 w160", "Wheel Speed (default " ResetSettings.WheelSpeed "):")
-            optWheelSpeed := MyGui.Add("Edit", "x" GuiWidth - MyGui.MarginX - 60 " yp-3 w60", Settings.WheelSpeed)
-            MyGui.Add("UpDown", "Range1-20", Settings.WheelSpeed)
+            MyGui.Add("Text", "xm y+35 w160", "Wheel Speed (default " ResetGeneral.WheelSpeed "):")
+            optWheelSpeed := MyGui.Add("Edit", "x" GuiWidth - MyGui.MarginX - 60 " yp-3 w60", General.WheelSpeed)
+            MyGui.Add("UpDown", "Range1-20", General.WheelSpeed)
 
 
     ; 5. BlueTooth
             optBT := MyGui.Add("Checkbox", "xm y+50 w220", "Auto detect Bluetooth connection")
-            optBT.Value := Settings.BTDetect
+            optBT.Value := General.BTDetect
 
     ; 6. Button OK
             MyGui.SetFont("s" Settings.GuiFontSizeMedium " w300", Settings.GuiFontName)
@@ -112,12 +104,12 @@ ShowOptionsGUI() {
                     SplashIcon.Destroy()
                 )
             case "Banner": (
-                    Splash.Show()
-                    Splash.Destroy()
+                    SplashBanner.Show()
+                    SplashBanner.Destroy()
                 )
         }
-        Settings.SplashScreen       := optSplash.Text
-        ;SaveINI()
+        Settings.SplashScreen := optSplash.Text
+        SaveINI()
     }
 
     ActionsTheme(Ctrl, *) {
@@ -125,30 +117,23 @@ ShowOptionsGUI() {
         ApplyTheme(Settings.DesiredTheme)
         if OSDSettings.UseOSD
             OSDThemeChange()
-        ;SaveINI()
+        SaveINI()
     }
 
     ActionsWheelSpeed(Ctrl, *) {
-        Settings.WheelSpeed := Ctrl.Value
+        General.WheelSpeed := Ctrl.Value
+        SaveINI()
     }
 
     ActionsBT(*) {
-        Settings.BTDetect := optBT.Value
+        General.BTDetect := optBT.Value
         BT_Toggle()
-        ;SaveINI()
+        SaveINI()
     }
 
     CleanDestroy(*) {
-        ; Extract the values chosen by the user
-        Settings.SplashScreen       := optSplash.Text
-        Settings.DesiredTheme       := optTheme.Text      
-        Settings.WheelSpeed         := optWheelSpeed.Value
-        Settings.BTDetect           := optBT.Value        
-
         MyGui.Destroy()
-
         RemoveGuiFromArray(MyGui)
         SaveINI()
-
     }
 }

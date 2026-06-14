@@ -1,29 +1,25 @@
 /************************************************************************
  * @description Options GUI with Spacious 2-Column Color Layout & Reset Action
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/05/18
- * @version 1.7.0
+ * @date 2026/05/24
+ * @version 1.8.0
  ***********************************************************************/
 
 #Requires AutoHotkey v2.0
 
 ShowOSDOptionsGUI() {
-    global Settings, OSDSettings, ResetOSDSettings
+    global Settings, OSDSettings, General
 
     ; --- STRUCTURAL BACKUPS (For Cancel and Reset actions) ---
-    OriginalSettings := Settings.Clone()
+    OriginalSettings    := Settings.Clone()
     OriginalOSDSettings := OSDSettings.Clone()
+    OriginalGeneral     := General.Clone()
 
     MyGuiTitle := "OSD Options"
 ;    MyGuiOptions := "+LastFound -SysMenu"
     MyGuiOptions := "+LastFound"
 
-    ; Check DarkMode
-    if (IsSet(CurrentActualTheme) && CurrentActualTheme == "Dark") {
-        MyGui := DarkGui(MyGuiOptions, MyGuiTitle)
-    } else {
-        MyGui := Gui(MyGuiOptions, MyGuiTitle)
-    }
+    MyGui := Gui(MyGuiOptions, MyGuiTitle)
 
     MyGui.SetFont("s" Settings.GuiFontSizeMedium, Settings.GuiFontName)
 
@@ -74,11 +70,11 @@ ShowOSDOptionsGUI() {
         optOSDTimeout := MyGui.Add("Edit", "vOSDTimeout x" GuiWidth - MyGui.MarginX - 95 " yp-3 w70", OSDSettings.TimeOut)
         MyGui.Add("UpDown", "vUpDownTimeout Range100-5000", OSDSettings.TimeOut)
 
-        ; 4.2. OSD Width
+         ; 4.2. OSD Width
         MyGui.Add("Text", "xM+25 y+20 w160", "Width (default " ResetOSDSettings.Width "):")
         optOSDWidth := MyGui.Add("Edit", "vOSDSize x" GuiWidth - MyGui.MarginX - 95 " yp-3 w70", OSDSettings.Width)
         MyGui.Add("UpDown", "vUpDownSize Range100-2000", OSDSettings.Width)
-
+ 
         ; 4.3. OSD Font Size
         MyGui.Add("Text", "xM+25 y+20 w160", "Font Size (default " ResetOSDSettings.FontSize "):")
         optFontSize := MyGui.Add("Edit", "vFontSize x" GuiWidth - MyGui.MarginX - 95 " yp-3 w70", OSDSettings.FontSize)
@@ -95,32 +91,44 @@ ShowOSDOptionsGUI() {
         ; Row 1: Default Text
         MyGui.Add("Text", "xM+25 y+15 w160 h20 +0x200", "Text:")
         optColorBtn1 := MyGui.Add("Text", "x" GuiWidth - MyGui.MarginX - 120 " yp w30 h22 Border vTextDefaultLight Background" OSDSettings.TextDefaultLight)
+        optColorBtn1.BypassTheme := true
         optColorBtn7 := MyGui.Add("Text", "x+30 yp w30 h22 Border vTextDefaultDark Background" OSDSettings.TextDefaultDark)
+        optColorBtn7.BypassTheme := true
 
         ; Row 2: Background
         MyGui.Add("Text", "xM+25 y+15 w160 h20 +0x200", "Background:")
         optColorBtn2 := MyGui.Add("Text", "x" GuiWidth - MyGui.MarginX - 120 " yp w30 h22 Border vBgColorLight Background" OSDSettings.BgColorLight)
+        optColorBtn2.BypassTheme := true
         optColorBtn8 := MyGui.Add("Text", "x+30 yp w30 h22 Border vBgColorDark Background" OSDSettings.BgColorDark)
+        optColorBtn8.BypassTheme := true
 
         ; Row 3: Border
         MyGui.Add("Text", "xM+25 y+15 w160 h20 +0x200", "Border:")
         optColorBtn3 := MyGui.Add("Text", "x" GuiWidth - MyGui.MarginX - 120 " yp w30 h22 Border vBorderColorLight Background" OSDSettings.BorderColorLight)
+        optColorBtn3.BypassTheme := true
         optColorBtn9 := MyGui.Add("Text", "x+30 yp w30 h22 Border vBorderColorDark Background" OSDSettings.BorderColorDark)
+        optColorBtn9.BypassTheme := true
 
         ; Row 4: Progress Foreground
         MyGui.Add("Text", "xM+25 y+15 w160 h20 +0x200", "Progress Fill:")
         optColorBtn4 := MyGui.Add("Text", "x" GuiWidth - MyGui.MarginX - 120 " yp w30 h22 Border vProgressFgColorLight Background" OSDSettings.ProgressFgColorLight)
+        optColorBtn4.BypassTheme := true
         optColorBtn10 := MyGui.Add("Text", "x+30 yp w30 h22 Border vProgressFgColorDark Background" OSDSettings.ProgressFgColorDark)
+        optColorBtn10.BypassTheme := true
 
         ; Row 5: Progress Background
         MyGui.Add("Text", "xM+25 y+15 w160 h20 +0x200", "Progress Track:")
         optColorBtn5 := MyGui.Add("Text", "x" GuiWidth - MyGui.MarginX - 120 " yp w30 h22 Border vProgressBgColorLight Background" OSDSettings.ProgressBgColorLight)
+        optColorBtn5.BypassTheme := true
         optColorBtn11 := MyGui.Add("Text", "x+30 yp w30 h22 Border vProgressBgColorDark Background" OSDSettings.ProgressBgColorDark)
+        optColorBtn11.BypassTheme := true
 
         ; Row 6: Progress Over 100
         MyGui.Add("Text", "xM+25 y+15 w160 h20 +0x200", "High Volume:")
         optColorBtn6 := MyGui.Add("Text", "x" GuiWidth - MyGui.MarginX - 120 " yp w30 h22 Border vProgressOver100Light Background" OSDSettings.ProgressOver100Light)
+        optColorBtn6.BypassTheme := true
         optColorBtn12 := MyGui.Add("Text", "x+30 yp w30 h22 Border vProgressOver100Dark Background" OSDSettings.ProgressOver100Dark)
+        optColorBtn12.BypassTheme := true
 
         MyGui.SetFont("s" Settings.GuiFontSizeMedium)
         ; -----------------------------------------------------------
@@ -198,15 +206,16 @@ ShowOSDOptionsGUI() {
             targetTheme := CurrentActualTheme
         }
 
-        While (IsObject(osdGui) && osdGui.Hwnd && WinVisible(osdGui.Hwnd))
-            Sleep(100)
-        
-        osdGui.Destroy()
+        try {
+            While (IsObject(osdGui) && osdGui.Hwnd && WinVisible(osdGui.Hwnd))
+                Sleep(100)
+            osdGui.Destroy()
+        }
         
         OSDUpdateColors(targetTheme) 
         
         CreateOSD()
-        ListenAndLastGainValues()
+        ListenAndLastGainValues
         ShowOSD(Faders[1])
     }
 
@@ -219,11 +228,13 @@ ShowOSDOptionsGUI() {
             CreateOSD()
             ShowOSD(Faders[1])
         } else {
-            While (IsObject(osdGui) && osdGui.Hwnd && WinVisible(osdGui.Hwnd))
-                Sleep(100)
-            osdGui.Destroy()
+            try {
+                While (IsObject(osdGui) && osdGui.Hwnd && WinVisible(osdGui.Hwnd))
+                    Sleep(100)
+                osdGui.Destroy()
+            }
         }
-        ListenAndLastGainValues()
+        ListenAndLastGainValues
     }
 
     ; The Handler for picking and assigning colors dynamically
@@ -272,32 +283,37 @@ ShowOSDOptionsGUI() {
     ; Executed on Cancel, Close (X), or Escape (Discards all changes)
     CancelDestroy(*) {
         ; Restore original active global objects from memory deep clones
-        Settings := OriginalSettings
+        Settings    := OriginalSettings
         OSDSettings := OriginalOSDSettings
+        General     := OriginalGeneral
 
-        ; Apply original application theme back
-        ApplyTheme(Settings.DesiredTheme)
 
         ; Restore preview OSD visually to original values immediately
-        if (IsObject(osdGui) && osdGui.Hwnd) {
+        try {
+            While (IsObject(osdGui) && osdGui.Hwnd && WinVisible(osdGui.Hwnd))
+                Sleep(100)
             osdGui.Destroy()
         }
         
         if OSDSettings.UseOSD {
             OSDUpdateColors(CurrentActualTheme)
             CreateOSD()
-            ListenAndLastGainValues()
+            ListenAndLastGainValues
         }
 
         MyGui.Destroy()
         RemoveGuiFromArray(MyGui)
+
+        ; Apply original application theme back
+        ApplyTheme(Settings.DesiredTheme)
     }
 
     ; Executed when clicking Reset button (Restores defaults and reloads GUI controls)
     ResetAction(*) {
         ; Restore active runtime parameters from the default template configurations
-        Settings := OriginalSettings.Clone()
+        Settings    := ResetSettings.Clone()
         OSDSettings := ResetOSDSettings.Clone()
+        General     := ResetGeneral.Clone()
 
         ; Apply restored default theme
         ApplyTheme(Settings.DesiredTheme)
@@ -334,7 +350,7 @@ ShowOSDOptionsGUI() {
         OSDDisableEnable()
 
         ; 4. Recreate the live OSD engine preview with default template values instantly
-        if (IsObject(osdGui) && osdGui.Hwnd) {
+        try {
             osdGui.Destroy()
         }
         

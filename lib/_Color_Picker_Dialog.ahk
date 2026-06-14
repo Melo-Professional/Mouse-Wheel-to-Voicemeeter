@@ -1,3 +1,11 @@
+/************************************************************************
+ * @description App Options
+ * @author maestrith
+ * @link https://autohotkey.com/board/topic/94083-ahk-11-font-and-color-dialogs/
+ * @date 2026/05/22
+ * @version 1.0.0
+ ***********************************************************************/
+
 ; AHK v2
 ; originally posted by maestrith 
 ; https://autohotkey.com/board/topic/94083-ahk-11-font-and-color-dialogs/
@@ -5,26 +13,27 @@
 ; ===============================================================
 ; Example
 ; ===============================================================
-/*  
- global newColorNumeric, defColor
- newColorNumeric := 0x00FF00 ; green
+/* 
+ global cc, defColor
+ cc := 0x00FF00 ; green
  defColor := [0xAA0000,0x00AA00,0x0000AA]
- MyGui := Gui("-MinimizeBox -MaximizeBox","Choose Color")
- MyGui.OnEvent("close",close_event)
- MyGui.OnEvent("escape",close_event)
- MyGui.AddButton("w150","Choose Color").OnEvent("click",choose_event)
- MyGui.BackColor := newColorNumeric
- MyGui.Show("")
+ oGui := Gui("-MinimizeBox -MaximizeBox","Choose Color")
+ oGui.OnEvent("close",close_event)
+ oGui.OnEvent("escape",close_event)
+ oGui.AddButton("w150","Choose Color").OnEvent("click",choose_event)
+ oGui.BackColor := cc
+ oGui.Show("")
  return
  choose_event(ctl,info) {
-     Global newColorNumeric, defColor
+     Global cc, defColor
    
      hwnd := ctl.gui.hwnd ; grab hwnd
-     newColorNumeric := "0x" ctl.gui.BackColor ; pre-select color from gui background (optional)
+     cc := "0x" ctl.gui.BackColor ; pre-select color from gui background (optional)
    
-     newColorNumeric := ColorSelect(newColorNumeric,hwnd,&defColor,1) ; specifying start color, parent window, starting custom colors, and basic display
+     ;cc := ColorSelect(cc,hwnd,&defColor,0) ; specifying start color, parent window, starting custom colors, and basic display
+     cc := ColorSelect(cc,hwnd,&defColor,1) ; specifying start color, parent window, starting custom colors, and basic display
    
-     If (newColorNumeric = -1)
+     If (cc = -1)
          return
    
      colorList := ""
@@ -32,16 +41,15 @@
          If v
              colorList .= "Index: " k " / Color: " Format("0x{:06X}",v) "`r`n"
    
-     ctl.gui.BackColor := newColorNumeric ; set gui background color
+     ctl.gui.BackColor := cc ; set gui background color
    
-     If newColorNumeric
-         ;msgbox "Output color: " newColorNumeric "`r`n`r`nCustom colors saved:`r`n`r`n" Trim(colorList,"`r`n")
-         msgbox "Current value of OSDSettings.TextDefaultLight: " OSDSettings.TextDefaultLight "`r`n`r`nOutput color: " newColorNumeric "`r`n`r`nCustom colors saved:`r`n`r`n" Trim(colorList,"`r`n")
+     If cc
+         msgbox "Output color: " cc "`r`n`r`nCustom colors saved:`r`n`r`n" Trim(colorList,"`r`n")
  }
  close_event(guiObj) {
      ExitApp
  }
- */ 
+ */
 ; ===============================================================
 ; END Example
 ; ===============================================================
