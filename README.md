@@ -1,9 +1,12 @@
-# Mouse Wheel to Voicemeeter
+<h1 align="center">Mouse Wheel to Voicemeeter</h1>
+<p align="center">
+  <a href="https://github.com/Melo-Professional/Mouse-Wheel-to-Voicemeeter/releases"><img src="https://img.shields.io/github/v/release/Melo-Professional/Mouse-Wheel-to-Voicemeeter?sort=semver&color=purple" alt="version"></a>
+    <a href="#screenshots"><img src="https://img.shields.io/static/v1?label=made%20with&message=%E2%9D%A4&color=red"></a>
+</p>
 
-![version](https://img.shields.io/github/v/release/Melo-Professional/Mouse-Wheel-to-Voicemeeter?sort=semver&color=purple)![](https://img.shields.io/static/v1?label=made%20with&message=%E2%9D%A4&color=red)
+<p align="center">To control Voicemeeter virtual inputs volumes with mouse wheel over Taskbar</p>
 
-To control Voicemeeter virtual inputs volumes from mouse wheel over Taskbar.
-
+---
 [https://github.com/user-attachments/assets/4634b85d-b0fb-4b9b-8f13-9a2bca9d0efc](https://github.com/user-attachments/assets/4634b85d-b0fb-4b9b-8f13-9a2bca9d0efc)
 
 This is an AutoHotKey script to control volume strips (virtual inputs) from Voicemeeter ([https://vb-audio.com/Voicemeeter/](https://vb-audio.com/Voicemeeter/)) by scrolling mouse wheel over Windows Taskbar.
