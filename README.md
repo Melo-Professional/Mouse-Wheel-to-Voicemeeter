@@ -1,6 +1,6 @@
 # Mouse Wheel to Voicemeeter
 
-![](https://img.shields.io/static/v1?label=made%20with&message=%E2%9D%A4&color=red)
+![version](https://img.shields.io/github/v/release/Melo-Professional/Mouse-Wheel-to-Voicemeeter?sort=semver&color=purple)![](https://img.shields.io/static/v1?label=made%20with&message=%E2%9D%A4&color=red)
 
 To control Voicemeeter virtual inputs volumes from mouse wheel over Taskbar.
 
