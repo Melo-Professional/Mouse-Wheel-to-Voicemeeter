@@ -1,8 +1,8 @@
 /************************************************************************
  * @description Config&Vars
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/06/08
- * @version 1.3.0
+ * @date 2026/07/20
+ * @version 1.5.0
  ***********************************************************************/
 
 ;@region Configuration
@@ -15,10 +15,11 @@ Global App := {
     NameNoSpace:                NameNoSpace,
     NameCutted:                 AppName,
     Description:                AppDescription,
-    Icon:                       A_IsCompiled ? A_ScriptFullPath : A_ScriptDir "\lib\app.ico",
-    IconPaused:                 A_IsCompiled ? A_ScriptFullPath : A_ScriptDir "\lib\app_Pause.ico",
+    Icon:                       A_IsCompiled ? A_ScriptFullPath : A_ScriptDir "\images\app.ico",
+    IconPaused:                 A_IsCompiled ? A_ScriptFullPath : A_ScriptDir "\images\app_Pause.ico",
     Copyright:                  "Developed by Melo`nmelo@meloprofessional.com`n©Melo. All rights reserved.",
-    Version:                    AppVersion
+    Version:                    AppVersion,
+    Github:                    ""
 }
 
 Global Settings := {

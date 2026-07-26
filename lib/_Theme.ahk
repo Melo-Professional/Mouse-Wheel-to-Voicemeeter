@@ -1,8 +1,8 @@
 /************************************************************************
  * @description Theme Library to apply light / dark / auto modes 
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/06/08
- * @version 1.9.0
+ * @date 2026/07/18
+ * @version 1.14.0 (Text color fixed)
  ***********************************************************************/
 
 #Requires AutoHotkey v2.0
@@ -17,27 +17,36 @@ ApplyTheme()
 HowtoCreateMyGui() {
     MyGuiTitle := "About"
     MyGuiOptions := "+LastFound -SysMenu"
-    MyGui := Gui(MyGuiOptions, MyGuiTitle)
+    ExampleGui := Gui(MyGuiOptions, MyGuiTitle)
  
     ; ---- GUI Content
-    MyGui.Add("Text",, "Current Theme: " . CurrentActualTheme)
+    ExampleGui.Add("Text",, "Current Theme: " . CurrentActualTheme)
+    txt33 := ExampleGui.Add("Text", "x25 y50", "Performance Controls")
+    txt33.ThemeStyle := "Strong" ; "Smooth"
+
+    txt34 := ExampleGui.Add("Text", "x25 y50", "Another Control")
+    txt34.BypassTheme := true
+
     ;----------------
  
-    MyGui.AddButton("h30 Default", "&OK").OnEvent("Click", CleanDestroy)
-    MyGui.OnEvent("Close", CleanDestroy)
-    MyGui.OnEvent("Escape", CleanDestroy)
-    ApplyThemeToGui(MyGui)
-    WatchedGUIs.Push(MyGui)
-    MyGui.Show()
+    ExampleGui.AddButton("h30 Default", "&OK").OnEvent("Click", CleanDestroy)
+    ExampleGui.OnEvent("Close", CleanDestroy)
+    ExampleGui.OnEvent("Escape", CleanDestroy)
+
+    ApplyThemeToGui(ExampleGui)
+    WatchedGUIs.Push(ExampleGui)
+
+    ExampleGui.Show()
+
     CleanDestroy(*) {
-          RemoveGuiFromArray(MyGui)
-          MyGui.Destroy()
+          RemoveGuiFromArray(ExampleGui)
+          ExampleGui.Destroy()
        }
  
-    return MyGui
+    return ExampleGui
 }
 
-ApplyThemeToGui(guiObj) {
+ApplyThemeToGui(guiObj, TextColor := "Auto") {
     if !Settings.DarkModeCompatible
         return    
 
@@ -47,7 +56,17 @@ ApplyThemeToGui(guiObj) {
     ; --- Color Conversion (with fallback) ---
     bgBGR   := HexToBGR(colors.Bg)
     ctrlBGR := HexToBGR(colors.HasOwnProp("Ctrl") ? colors.Ctrl : colors.Bg)
-    textBGR := HexToBGR(colors.TextDefault)
+
+    if (TextColor = "Dark") {
+        colors.TextDefault := Settings.Theme.Dark.TextDefault
+        colors.TextStrong := Settings.Theme.Dark.TextStrong
+        colors.TextSmooth := Settings.Theme.Dark.TextSmooth
+    } else if (TextColor = "Light") {
+        colors.TextDefault := Settings.Theme.Light.TextDefault
+        colors.TextStrong := Settings.Theme.Light.TextStrong
+        colors.TextSmooth := Settings.Theme.Light.TextSmooth
+    }
+        textBGR := HexToBGR(colors.TextDefault)
 
     ; --- Dark Mode System Setup ---
     static uxtheme := DllCall("GetModuleHandle", "Str", "uxtheme.dll", "Ptr")
@@ -70,13 +89,25 @@ ApplyThemeToGui(guiObj) {
     ; --- WM_CTLCOLORLISTBOX Handler (FIXED: Toggles cleanly between modes) ---
     static PrevOnCtlBound := 0
     if (PrevOnCtlBound) {
-        OnMessage(0x0134, PrevOnCtlBound, 0) ; Disables the old custom drawing handle
+
+        if IsSet(MessageManager) {
+            MessageManager.Unregister(0x0134, PrevOnCtlBound) ; Disables the old custom drawing handle
+        } else {
+            OnMessage(0x0134, PrevOnCtlBound, 0) ; Disables the old custom drawing handle
+        }
+
         PrevOnCtlBound := 0
     }
 
     if (isDark) {
         OnCtlBound := OnCtlColorListbox.Bind(ctrlBGR, textBGR)
-        OnMessage(0x0134, OnCtlBound, -1)
+
+        if IsSet(MessageManager) {
+            MessageManager.Register(0x0134, OnCtlBound, true)
+        } else {
+            OnMessage(0x0134, OnCtlBound, -1)
+        }
+
         PrevOnCtlBound := OnCtlBound
     }
 
@@ -95,16 +126,23 @@ ApplyThemeToGui(guiObj) {
             DllCall("uxtheme.dll\SetWindowTheme", "ptr", ctrlObj.Hwnd, "str", themeStr, "ptr", 0)
 
             switch ctrlObj.Type {
-                case "Text", "Checkbox", "Radio":
-                    if (InStr(ctrlObj.Name, "Title") || InStr(ctrlObj.Name, "Strong"))
+                case "Text", "Checkbox", "GroupBox":
+
+                    ctrlObj.Opt("+BackgroundTrans")
+                    
+                    ; Direct implementation support for dynamic custom object property tags
+                    tStyle := ctrlObj.HasOwnProp("ThemeStyle") ? ctrlObj.ThemeStyle : ""
+                    
+                    if (tStyle == "Strong" || InStr(ctrlObj.Name, "Title") || InStr(ctrlObj.Name, "Strong"))
                         ctrlObj.Opt("c" . colors.TextStrong)
-                    else if (InStr(ctrlObj.Name, "Footer") || InStr(ctrlObj.Name, "Smooth"))
+                    else if (tStyle == "Weak" || tStyle == "Smooth" || InStr(ctrlObj.Name, "Footer") || InStr(ctrlObj.Name, "Smooth"))
                         ctrlObj.Opt("c" . colors.TextSmooth)
                     else
                         ctrlObj.Opt("c" . colors.TextDefault)
 
-                    if (ctrlObj.Type = "Text")
-                        ctrlObj.Opt("+Background" . colors.Bg)
+
+                    ;if (ctrlObj.Type = "Text")
+                     ;   ctrlObj.Opt("+Background" . colors.Bg)
 
                 case "Edit", "ListBox", "ComboBox", "DDL":
                     ctrlBg := colors.HasOwnProp("Ctrl") ? colors.Ctrl : colors.Bg
@@ -130,10 +168,7 @@ ApplyThemeToGui(guiObj) {
                     }
                     SetListViewHeaderSubclass(ctrlObj.Hwnd, textBGR)
 
-                case "Button":
-                    ctrlObj.Opt("+Background" . colors.Bg)
-
-                case "Progress":
+                case "Button", "Progress":
                     ctrlObj.Opt("+Background" . colors.Bg)
             }
 
@@ -244,10 +279,20 @@ ApplyTheme(ThemeMode := Settings.DesiredTheme) {
     Settings.DesiredTheme := ThemeMode
     
     if (ThemeMode == "Auto") {
-        OnMessage(0x1A, WindowsThemeChanged)
+        if IsSet(MessageManager) {
+            MessageManager.Register(0x031A, WindowsThemeChanged)
+        } else {
+            OnMessage(0x031A, WindowsThemeChanged)
+        }
+
         CurrentActualTheme := GetWindowsTheme()
     } else {
-        OnMessage(0x1A, WindowsThemeChanged, 0)
+        if IsSet(MessageManager) {
+            MessageManager.Unregister(0x031A, WindowsThemeChanged)
+        } else {
+            OnMessage(0x031A, WindowsThemeChanged, 0)
+        }
+
         CurrentActualTheme := ThemeMode
     }
     

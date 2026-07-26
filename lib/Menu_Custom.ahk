@@ -1,8 +1,8 @@
 /************************************************************************
  * @description Robust, Modular Menu (No-Crash Dependency Checking)
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/06/08
- * @version 1.3.1
+ * @date 2026/07/26
+ * @version 1.3.2
  ***********************************************************************/
 
 #Requires AutoHotkey v2.0
@@ -20,7 +20,8 @@ Menu_Custom() {
     TrayMenu.Insert("More", "Restart All", (*) => RestartAll())
     TrayMenu.Insert("More")
     TrayMenu.Insert("More", "Sound Control Panel", (*) => Run("control mmsys.cpl sounds"))
-    TrayMenu.Insert("More", "Volume Mixer", (*) => Run("sndvol.exe"))
+    TrayMenu.Insert("More", "Volume Mixer Classic", (*) => Run("sndvol.exe"))
+    TrayMenu.Insert("More", "Volume Mixer Modern", (*) => Run("ms-settings:apps-volume"))
     TrayMenu.Insert("More")
 
 
@@ -31,7 +32,7 @@ Menu_Custom() {
 ;    MoreMenu.Add("GitHub Repo", Repo)
 
     Repo(*) {
-        Run("https://github.com/Melo-Professional/Mouse-Wheel-to-Voicemeeter")
+        Run(App.Github)
     }
 
 

@@ -2,9 +2,9 @@
 /************************************************************************
  * @description Control Voicemeeter virtual Inputs volumes using the mouse wheel over the taskbar.
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/06/13
+ * @date 2026/07/26
  * @releasedate 2022/05/11
- * @version 3.66.4.0
+ * @version 3.67.100.0
  * @github https://github.com/Melo-Professional/Mouse-Wheel-to-Voicemeeter
  * @credits VMR AHK https://github.com/SaifAqqad/VMR.ahk
  * @credits trismarck code from here: https://www.autohotkey.com/board/topic/96139-detect-screen-edges-two-monitors/
@@ -16,18 +16,27 @@ Monitor options
 osd_manager:
     TransColor := "ABCDEF" ???
     WinSetTransColor(TransColor, osdGui) ???
+
+    I need to update the menu and menu template to check
+    if it is currently suspended or paused and check the boxes accodanly.
+    There was a problem when gui options was opened and the user change the theme from menu and cancel in the
+    gui options the theme was applied back. I fixed it by loadINI whenever the user cancel the gui options.
+    But anyway I need to update the menu template.
 */
 
 AppName := "Mouse Wheel to Voicemeeter"
 ;@Ahk2Exe-Let U_AppName = %A_PriorLine%
-AppVersion := "3.66.4.0"
+AppVersion := "3.67.100.0"
 ;@Ahk2Exe-Let U_Version = %A_PriorLine%
 AppDescription := "Control Voicemeeter virtual Inputs volumes using the mouse wheel over the taskbar."
 ;@endregion
 
+;backupMode := "AppVersionAndMinutes"
+
 ;@region Directives
 #Requires AutoHotkey v2.0
 #SingleInstance Force
+A_MenuMaskKey := "vkFF"
 Persistent()
 SetWorkingDir(A_ScriptDir)
 A_AllowMainWindow := 0
@@ -39,12 +48,20 @@ CoordMode("Mouse", "Screen")
 
 ;@region Includes
 #Include *i <_CompilerDirectives>
+#Include *i <_Backup>
 #Include *i <_Config&Vars>
 #Include *i <_MsgBoxCustom>
 #Include *i <_SaveSettings>
+;#Include *i <_MessageManager>
 #Include *i <_Theme>
-;#Include *i <_OSDCustom>
+;#Include *i <_FrostedTheme>
+#Include *i <_TitleBar>
+;#Include *i <_ModernSlider>
 #Include *i <_Color_Picker_Dialog>
+;#Include *i <_ReloadWithArgs>
+;#Include *i <_HotkeysRecorder>
+;#Include *i <_ODColors>
+;#Include *i <_OSDCustom>
 #Include *i <_SplashScreen>
 #Include *i <_About>
 ;#Include *i <_Help>

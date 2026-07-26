@@ -1,12 +1,13 @@
 /************************************************************************
  * @description Vars_Custom
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/06/08
- * @version 1.0.0
+ * @date 2026/07/26
+ * @version 1.0.1
  ***********************************************************************/
 
 ;@region VARS
 ; CUSTOM VARIABLES
+App.Github := "https://github.com/Melo-Professional/Mouse-Wheel-to-Voicemeeter"
 
 Global General := {
     BTDetect:                   true,

@@ -38,14 +38,14 @@ ShowOSDOptionsGUI() {
     ; 3.2. Theme (Auto / Light / Dark using a DropDownList)
         ThemeList := ["Auto", "Light", "Dark"]
         StartingIndex := 1
-        For Index, Value in ThemeList {
-            If (Value = Settings.DesiredTheme) {
+        For Index, Value in Settings.ThemeList {
+            If (Value == Settings.DesiredTheme) {
                 StartingIndex := Index
                 Break
             }
         }
         MyGui.Add("Text", "xM+25 y+20 w160", "Theme:")
-        optTheme := MyGui.AddDDL("vOSDTheme x" GuiWidth - MyGui.MarginX - 115 " yp-3 w90 Choose" . StartingIndex, ["Auto", "Light", "Dark"])
+        optTheme := MyGui.AddDDL("vOSDTheme x" GuiWidth - MyGui.MarginX - 115 " yp-3 w90 Choose" . StartingIndex, Settings.ThemeList)
 
 
         ; 3.2. OSD Position
@@ -278,14 +278,18 @@ ShowOSDOptionsGUI() {
         
         ; Save changes permanently to INI file
         SaveINI()
+        StartMenu()
+        Menu_Custom()
     }
 
     ; Executed on Cancel, Close (X), or Escape (Discards all changes)
     CancelDestroy(*) {
         ; Restore original active global objects from memory deep clones
-        Settings    := OriginalSettings
-        OSDSettings := OriginalOSDSettings
-        General     := OriginalGeneral
+;        Settings    := OriginalSettings
+;        OSDSettings := OriginalOSDSettings
+;        General     := OriginalGeneral
+
+        LoadINI()
 
 
         ; Restore preview OSD visually to original values immediately

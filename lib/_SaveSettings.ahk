@@ -1,8 +1,8 @@
 /************************************************************************
  * @description Handles user settings utilizing a standard INI file
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/06/08
- * @version 1.5.0
+ * @date 2026/07/12
+ * @version 1.6.0
  ***********************************************************************/
 
 #Requires AutoHotkey v2.0
@@ -51,9 +51,11 @@ class INIManager {
 
         for path in this.Registered.Get(rootName, []) {
             keyName := StrReplace(path, ".", "_")
-            value   := IniRead(this.IniPath, rootName, keyName, "")
+            ; Use "NOT_FOUND" placeholder to separate missing keys from intentionally blank values
+            value   := IniRead(this.IniPath, rootName, keyName, "NOT_FOUND")
 
-            if (value != "") {
+            ; Process the property if it was explicitly found in the INI file
+            if (value != "NOT_FOUND") {
                 this._SetByPath(rootObj, path, value)
             }
         }
@@ -63,8 +65,7 @@ class INIManager {
     static Save(rootObj, rootName) {
         for path in this.Registered.Get(rootName, []) {
             value := this._GetByPath(rootObj, path)
-            if (value != "")
-                IniWrite(value, this.IniPath, rootName, StrReplace(path, ".", "_"))
+            IniWrite(value, this.IniPath, rootName, StrReplace(path, ".", "_"))
         }
     }
 
@@ -96,24 +97,38 @@ class INIManager {
         current := obj
         for i, key in keys {
             if (i = keys.Length) {
-                ; 1. Check if the property already exists in the default object
+                ; Check if the property already exists in the default object
                 if current.HasOwnProp(key) {
                     originalValue := current.%key%
                     origType := Type(originalValue)
 
-                    ; 2. Enforce strict type matching based on the original script definition
-                    if (originalValue = true || originalValue = false) {
-                        ; Convert "1"/"true" strings back to proper booleans
-                        current.%key% := (value = "1" || value = "true")
-                    }
-                    else if (origType = "Integer") {
-                        current.%key% := Integer(value)
+                    if (origType = "Integer") {
+                        ; Since Booleans are Integers in AHK v2, check the incoming INI string first
+                        if (value = "true" || value = "1") {
+                            current.%key% := true
+                        } else if (value = "false") {
+                            current.%key% := false
+                        } else if (value == "") {
+                            current.%key% := 0
+                        } else if IsNumber(value) {
+                            ; Only convert to Integer if the INI value is a valid number
+                            current.%key% := Integer(value)
+                        } else {
+                            ; Dynamic fallback: accept text strings like "Auto"
+                            current.%key% := String(value)
+                        }
                     }
                     else if (origType = "Float") {
-                        current.%key% := Float(value)
+                        if (value == "") {
+                            current.%key% := 0.0
+                        } else if IsNumber(value) {
+                            current.%key% := Float(value)
+                        } else {
+                            current.%key% := String(value)
+                        }
                     }
                     else {
-                        ; Keeps strings intact (crucial for Hex colors like "272525")
+                        ; Keeps strings intact (crucial for empty hotkeys "" or Hex colors)
                         current.%key% := String(value)
                     }
                 } else {

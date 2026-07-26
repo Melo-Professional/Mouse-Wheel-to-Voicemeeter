@@ -1,8 +1,8 @@
 /************************************************************************
- * @description Robust, Modular Menu (No-Crash Dependency Checking)
+ * @description Menu Template
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/06/08
- * @version 1.9.0
+ * @date 2026/07/20
+ * @version 2.5.1
  ***********************************************************************/
 
 #Requires AutoHotkey v2.0
@@ -36,14 +36,14 @@ StartMenu() {
     A_TrayMenu.MoreMenu := MoreMenu
     
     ; 1. Check for Dark Mode / Themes (Requires global 'Settings' object)
-    if IsSet(Settings) && Settings.HasProp("DarkModeCompatible") && Settings.DarkModeCompatible {
-        for theme in Settings.ThemeList {
-            MoreMenu.Add(theme, ThemeHandler)
-        }
-        MoreMenu.Check(Settings.DesiredTheme)
-        MoreMenu.Disable(Settings.DesiredTheme)
-        MoreMenu.Add()
-    }
+;    if IsSet(Settings) && Settings.HasProp("DarkModeCompatible") && Settings.DarkModeCompatible {
+;        for theme in Settings.ThemeList {
+;            MoreMenu.Add(theme, ThemeHandler)
+;        }
+;        MoreMenu.Check(Settings.DesiredTheme)
+;        MoreMenu.Disable(Settings.DesiredTheme)
+;        MoreMenu.Add()
+;    }
     
     ; 2. Start on Boot (Self-contained, always included)
     MoreMenu.Add("Start on Boot", MenuBootHandler)
@@ -69,7 +69,7 @@ StartMenu() {
     }
     TrayMenu.Insert("Exit", "More", MoreMenu)
     ;TrayMenu.Add("Restart", (*) => Reload())
-    TrayMenu.Insert("Exit", "Restart", (*) => Reload())
+    TrayMenu.Insert("Exit", "Restart", (*) => ReloadClean())
 
     SettingsLoadStartOnBoot(appName) ? MoreMenu.Check("Start on Boot") : ""
 
@@ -91,7 +91,7 @@ StartMenu() {
         }
     }
 
-    ThemeHandler(ItemName, ItemPos, MyMenu) {
+/*     ThemeHandler(ItemName, ItemPos, MyMenu) {
         global Settings, OSDSettings
         Settings.DesiredTheme := ItemName
         try %"ApplyTheme"%(Settings.DesiredTheme)
@@ -110,7 +110,7 @@ StartMenu() {
             MyMenu.% isCurrent ? "Check" : "Uncheck" %(item)
             MyMenu.% isCurrent ? "Disable" : "Enable" %(item)
         }
-    }
+    } */
 
     SettingsLoadStartOnBoot(appName) {
         try {
@@ -122,12 +122,17 @@ StartMenu() {
     }
 
     SettingsSaveStartOnBoot(enable, appName) {
+        runKey := "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run"
+        Loop Reg, runKey, "V" {
+            if InStr(A_LoopRegName, appName) == 1 {
+                RegDelete(runKey, A_LoopRegName)
+            }
+        }
         if enable {
-            RegWrite('"' A_AhkPath '"', "REG_SZ", "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run", appName)
-        } else {
-            RegDelete("HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run", appName)
+            RegWrite('"' A_AhkPath '"', "REG_SZ", runKey, appName)
         }
     }
+
 
     MenuBootHandler(ItemName, ItemPos, MyMenu) {
         local appName
@@ -166,12 +171,35 @@ StartMenu() {
     }
 
     ; --- FIRST RUN NOTIFICATION ---
-    RegKeyPath := "HKCU\Software\" . AppName
+    Global FirstRun := false
+    RegKeyPath  := "HKCU\Software\" . appName
+    RegVersion  := ""
+    RegPath     := ""
     try {
-        RegRead(RegKeyPath, "FirstRun")
-    } 
-    catch {
-        RegWrite(1, "REG_DWORD", RegKeyPath, "FirstRun")
-        TrayTip(App.Name " is now active and running in your system tray.", "Welcome!", "Mute " 36)
+        RegVersion      := RegRead(RegKeyPath, "version")
+        RegPath         := RegRead(RegKeyPath, "path")
     }
+    if !((RegPath == '"' A_AhkPath '"') && (RegVersion == App.Version)) {
+        RegWrite( App.Version, "REG_SZ", RegKeyPath, "version")
+        RegWrite('"' A_AhkPath '"', "REG_SZ", RegKeyPath, "path")
+        if A_IsCompiled {
+            SettingsSaveStartOnBoot(true, appName)
+            MoreMenu.Check("Start on Boot")
+        }
+        TrayTip(App.Name " is now active and running in your system tray.", "Welcome!", "Mute " 36)
+        Global FirstRun := true
+    }
+}
+
+ReloadClean() {
+    if DllCall("userenv\CreateEnvironmentBlock", "Ptr*", &lpEnv:=0, "Ptr",0, "Int",0) {
+        si := Buffer(siSize := A_PtrSize == 8 ? 104 : 68, 0), NumPut("UInt", siSize, si)
+        pi := Buffer(A_PtrSize == 8 ? 24 : 16, 0)
+        cmd := A_IsCompiled ? '"' A_ScriptFullPath '" /force' : '"' A_AhkPath '" /force "' A_ScriptFullPath '"'
+
+        if DllCall("CreateProcessW", "Ptr",0, "Str",cmd, "Ptr",0, "Ptr",0, "Int",0, "UInt",0x400, "Ptr",lpEnv, "Ptr",0, "Ptr",si, "Ptr",pi)
+            ExitApp()
+        DllCall("userenv\DestroyEnvironmentBlock", "Ptr", lpEnv)
+    }
+    Reload()
 }

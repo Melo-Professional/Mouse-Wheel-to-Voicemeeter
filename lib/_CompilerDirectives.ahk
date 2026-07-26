@@ -1,8 +1,8 @@
 /************************************************************************
  * @description Compiler Directives
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/06/07
- * @version 1.3.0
+ * @date 2026/06/20
+ * @version 1.1.0
  ***********************************************************************/
 
 ;@region Compilation
@@ -16,11 +16,11 @@
 ;@Ahk2Exe-SetVersion %U_version%
 ;@Ahk2Exe-SetCompanyName Melo Professional
 ;@Ahk2Exe-SetCopyright © Melo. All rights reserved.
-;@Ahk2Exe-SetMainIcon .\lib\app.ico
-;@Ahk2Exe-AddResource .\lib\app.ico, 160
-;@Ahk2Exe-AddResource .\lib\app.ico, 206
-;@Ahk2Exe-AddResource .\lib\app_Pause.ico, 207
-;@Ahk2Exe-AddResource .\lib\app.ico, 208
+;@Ahk2Exe-SetMainIcon .\images\app.ico
+;@Ahk2Exe-AddResource .\images\app.ico, 160
+;@Ahk2Exe-AddResource .\images\app.ico, 206
+;@Ahk2Exe-AddResource .\images\app_Pause.ico, 207
+;@Ahk2Exe-AddResource .\images\app.ico, 208
 ;@Ahk2Exe-ExeName %U_appnameclean%
 ;@Ahk2Exe-UpdateManifest 0, %U_appname%
 
@@ -50,19 +50,19 @@ AppDescription := "This is a template as a starting point for your AutoHotKey pr
 ;@Ahk2Exe-SetCompanyName Melo Professional
 ;@Ahk2Exe-SetCopyright © Melo. All rights reserved.
 ;@Ahk2Exe-ExeName %U_appnameclean%
-;@Ahk2Exe-SetMainIcon .\lib\app.ico
-;@Ahk2Exe-AddResource .\lib\app.ico, 160
-;@Ahk2Exe-AddResource .\lib\app.ico, 206
-;@Ahk2Exe-AddResource .\lib\app_Pause.ico, 207
-;@Ahk2Exe-AddResource .\lib\app.ico, 208
+;@Ahk2Exe-SetMainIcon .\images\app.ico
+;@Ahk2Exe-AddResource .\images\app.ico, 160
+;@Ahk2Exe-AddResource .\images\app.ico, 206
+;@Ahk2Exe-AddResource .\images\app_Pause.ico, 207
+;@Ahk2Exe-AddResource .\images\app.ico, 208
 ;@Ahk2Exe-UpdateManifest 0, %U_appname%
 
 ;@Ahk2Exe-Let U_appname = %U_LineAppName~U)^.*?AppName\s*:=\s*"([^"]+)".*$~$1%
 ;@Ahk2Exe-Let U_version = %U_LineVersion~U)^.*?AppVersion\s*:=\s*"([^"]+)".*$~$1%
-;@Ahk2Exe-SetMainIcon .\lib\%U_appnameclean%.ico
-;@Ahk2Exe-AddResource .\lib\%U_appnameclean%.ico, 160
-;@Ahk2Exe-AddResource .\lib\%U_appnameclean%.ico, 206
-;@Ahk2Exe-AddResource .\lib\%U_appnameclean%_Pause.ico, 207
-;@Ahk2Exe-AddResource .\lib\%U_appnameclean%.ico, 208
+;@Ahk2Exe-SetMainIcon .\images\%U_appnameclean%.ico
+;@Ahk2Exe-AddResource .\images\%U_appnameclean%.ico, 160
+;@Ahk2Exe-AddResource .\images\%U_appnameclean%.ico, 206
+;@Ahk2Exe-AddResource .\images\%U_appnameclean%_Pause.ico, 207
+;@Ahk2Exe-AddResource .\images\%U_appnameclean%.ico, 208
 ;@Ahk2Exe-IgnoreEnd
 ;@endregion
