@@ -1,8 +1,8 @@
 /************************************************************************
  * @description Theme Library to apply light / dark / auto modes 
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/07/18
- * @version 1.14.0 (Text color fixed)
+ * @date 2026/07/27
+ * @version 1.15.0 (removed background trans from text ddl and checkbox)
  ***********************************************************************/
 
 #Requires AutoHotkey v2.0
@@ -127,8 +127,9 @@ ApplyThemeToGui(guiObj, TextColor := "Auto") {
 
             switch ctrlObj.Type {
                 case "Text", "Checkbox", "GroupBox":
-
-                    ctrlObj.Opt("+BackgroundTrans")
+					if !(ctrlObj.Type = "Text") {
+	                    ctrlObj.Opt("+BackgroundTrans")
+					}
                     
                     ; Direct implementation support for dynamic custom object property tags
                     tStyle := ctrlObj.HasOwnProp("ThemeStyle") ? ctrlObj.ThemeStyle : ""

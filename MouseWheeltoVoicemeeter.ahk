@@ -2,9 +2,9 @@
 /************************************************************************
  * @description Control Voicemeeter virtual Inputs volumes using the mouse wheel over the taskbar.
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/07/26
+ * @date 2026/07/30
  * @releasedate 2022/05/11
- * @version 3.67.100.0
+ * @version 3.67.102.0
  * @github https://github.com/Melo-Professional/Mouse-Wheel-to-Voicemeeter
  * @credits VMR AHK https://github.com/SaifAqqad/VMR.ahk
  * @credits trismarck code from here: https://www.autohotkey.com/board/topic/96139-detect-screen-edges-two-monitors/
@@ -26,12 +26,12 @@ osd_manager:
 
 AppName := "Mouse Wheel to Voicemeeter"
 ;@Ahk2Exe-Let U_AppName = %A_PriorLine%
-AppVersion := "3.67.100.0"
+AppVersion := "3.67.102.0"
 ;@Ahk2Exe-Let U_Version = %A_PriorLine%
 AppDescription := "Control Voicemeeter virtual Inputs volumes using the mouse wheel over the taskbar."
 ;@endregion
 
-;backupMode := "AppVersionAndMinutes"
+;_bkpMode := "AppVersionAndMinutes"
 
 ;@region Directives
 #Requires AutoHotkey v2.0

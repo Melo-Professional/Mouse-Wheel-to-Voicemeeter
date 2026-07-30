@@ -1,8 +1,8 @@
 /************************************************************************
  * @description Custom Title Bar (Isolated Window Messages)
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/07/20
- * @version 1.5.1 (title left)
+ * @date 2026/07/27
+ * @version 1.5.2 (Windows 10 compatibility and title background)
  ***********************************************************************/
 
 /* HOW TO USE
@@ -92,7 +92,8 @@ class CustomTitleBar {
             btnAreaWidth := (cfg.Close?46:0) + (cfg.Max?46:0) + (cfg.Min?46:0)
             textWidth := w - currentX - btnAreaWidth - 10
             
-            tb.TextCtrl := guiObj.Add("Text", "X" currentX " Y0 W" textWidth " H" cfg.Height " +0x200 BackgroundTrans", cfg.Title)
+;            tb.TextCtrl := guiObj.Add("Text", "X" currentX " Y0 W" textWidth " H" cfg.Height " +0x200 BackgroundTrans", cfg.Title)
+            tb.TextCtrl := guiObj.Add("Text", "X" currentX " Y0 W" textWidth " H" cfg.Height " +0x200", cfg.Title)
         }
 
         ; 3. Isolated Drag Support
@@ -182,38 +183,38 @@ class CustomTitleBar {
     }
 
     static RenderButtons(tb) {
-        cfg := tb.Cfg
-        guiObj := tb.Gui
-        bckcolor := tb.Gui.BackColor
-        
-        guiObj.SetFont("S8 cWhite", "Segoe Fluent Icons")
-        
-        btnWidth := 46
-        btnHeight := tb.Height
-        w := guiObj.HasProp("Width") ? guiObj.Width : 200
-        
-        if (cfg.Close) {
-            btnX := "X" . (w - btnWidth)
-            tb.Buttons["Close"] := guiObj.Add("Text", btnX . " Y0 W" btnWidth " H" btnHeight " +Center +0x200 +0x100 +Background" bckcolor, Chr(0xE8BB))
-            ;tb.Buttons["Close"].OnEvent("Click", (*) => (this.TitleBars.Delete(guiObj.Hwnd), guiObj.Destroy()))
-            ; NEW (Fires OnEvent("Close") automatically)
-            tb.Buttons["Close"].OnEvent("Click", (*) => PostMessage(0x0010, 0, 0, guiObj.Hwnd))
-        }
-        if (cfg.Max) {
-            offset := cfg.Close ? 2 : 1
-            btnX := "X" . (w - (btnWidth * offset))
-            tb.Buttons["Max"] := guiObj.Add("Text", btnX . " Y0 W" btnWidth " H" btnHeight " +Center +0x200 +0x100 +Background" bckcolor, Chr(0xE922))
-            tb.Buttons["Max"].OnEvent("Click", (*) => WinGetMinMax(guiObj.Hwnd) ? guiObj.Restore() : guiObj.Maximize())
-        }
-        if (cfg.Min) {
-            offset := (cfg.Close ? 1 : 0) + (cfg.Max ? 1 : 0) + 1
-            btnX := "X" . (w - (btnWidth * offset))
-            tb.Buttons["Min"] := guiObj.Add("Text", btnX . " Y0 W" btnWidth " H" btnHeight " +Center +0x200 +0x100 +Background" bckcolor, Chr(0xE921))
-            tb.Buttons["Min"].OnEvent("Click", (*) => guiObj.Minimize())
-        }
+		cfg := tb.Cfg
+		guiObj := tb.Gui
+		bckcolor := tb.Gui.BackColor
+		
+		; Windows 11 (build 22000+) uses "Segoe Fluent Icons", Windows 10 uses "Segoe MDL2 Assets"
+		iconFont := (VerCompare(A_OSVersion, "10.0.22000") >= 0) ? "Segoe Fluent Icons" : "Segoe MDL2 Assets"
+		guiObj.SetFont("S8 cWhite", iconFont)
+		
+		btnWidth := 46
+		btnHeight := tb.Height
+		w := guiObj.HasProp("Width") ? guiObj.Width : 200
+		
+		if (cfg.Close) {
+			btnX := "X" . (w - btnWidth)
+			tb.Buttons["Close"] := guiObj.Add("Text", btnX . " Y0 W" btnWidth " H" btnHeight " +Center +0x200 +0x100 +Background" bckcolor, Chr(0xE8BB))
+			tb.Buttons["Close"].OnEvent("Click", (*) => PostMessage(0x0010, 0, 0, guiObj.Hwnd))
+		}
+		if (cfg.Max) {
+			offset := cfg.Close ? 2 : 1
+			btnX := "X" . (w - (btnWidth * offset))
+			tb.Buttons["Max"] := guiObj.Add("Text", btnX . " Y0 W" btnWidth " H" btnHeight " +Center +0x200 +0x100 +Background" bckcolor, Chr(0xE922))
+			tb.Buttons["Max"].OnEvent("Click", (*) => WinGetMinMax(guiObj.Hwnd) ? guiObj.Restore() : guiObj.Maximize())
+		}
+		if (cfg.Min) {
+			offset := (cfg.Close ? 1 : 0) + (cfg.Max ? 1 : 0) + 1
+			btnX := "X" . (w - (btnWidth * offset))
+			tb.Buttons["Min"] := guiObj.Add("Text", btnX . " Y0 W" btnWidth " H" btnHeight " +Center +0x200 +0x100 +Background" bckcolor, Chr(0xE921))
+			tb.Buttons["Min"].OnEvent("Click", (*) => guiObj.Minimize())
+		}
 
-        guiObj.SetFont("S10 cWhite", "Segoe UI")
-    }
+		guiObj.SetFont("S10 cWhite", "Segoe UI")
+	}
 
     static OnGuiSize(guiObj, minMax, width, height) {
         if !this.TitleBars.Has(guiObj.Hwnd)
