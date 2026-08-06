@@ -2,9 +2,9 @@
 /************************************************************************
  * @description Control Voicemeeter virtual Inputs volumes using the mouse wheel over the taskbar.
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/07/30
+ * @date 2026/08/06
  * @releasedate 2022/05/11
- * @version 3.67.102.0
+ * @version 3.68.0.0
  * @github https://github.com/Melo-Professional/Mouse-Wheel-to-Voicemeeter
  * @credits VMR AHK https://github.com/SaifAqqad/VMR.ahk
  * @credits trismarck code from here: https://www.autohotkey.com/board/topic/96139-detect-screen-edges-two-monitors/
@@ -26,7 +26,7 @@ osd_manager:
 
 AppName := "Mouse Wheel to Voicemeeter"
 ;@Ahk2Exe-Let U_AppName = %A_PriorLine%
-AppVersion := "3.67.102.0"
+AppVersion := "3.68.0.0"
 ;@Ahk2Exe-Let U_Version = %A_PriorLine%
 AppDescription := "Control Voicemeeter virtual Inputs volumes using the mouse wheel over the taskbar."
 ;@endregion
@@ -62,6 +62,7 @@ CoordMode("Mouse", "Screen")
 ;#Include *i <_HotkeysRecorder>
 ;#Include *i <_ODColors>
 ;#Include *i <_OSDCustom>
+#Include *i <_AutoUpdater>
 #Include *i <_SplashScreen>
 #Include *i <_About>
 ;#Include *i <_Help>
@@ -80,6 +81,9 @@ CoordMode("Mouse", "Screen")
 ; TRAY ICON + MENU
 StartMenu()
 Menu_Custom()
+if IsSet(StartAutoUpdater) {
+	%"StartAutoUpdater"%()
+}
 
 ;@endregion
 ;@endregion
@@ -108,13 +112,37 @@ Faders := GetFaders()
 ListenAndLastGainValues()
 
 ; HELPER FUNCTIONS
-SoundPlayWin(sound := "Windows Notify", timer := 3000)
-{
-  try SoundPlay(A_WinDir "\Media\" sound ".wav")
-  SetTimer(ReleaseFile,-timer)
-  ReleaseFile(){
+/* 
+SoundPlayWin(audiofile := "Windows Notify", timer := 3000) {
+
+    if !InStr(audiofile, "\")
+        audiofile := A_WinDir "\Media\" audiofile ".wav"
+
+    try SoundPlay(audiofile)
+    SetTimer(ReleaseFile,-timer)
+    ReleaseFile(){
     try SoundPlay("NON-EXISTENT.wav")  ; releases previously played file from "in use"
   }
+}
+ */
+
+SoundPlayWin(audiofile := "Windows Notify", timer := 3000) {
+    ; If relative/short name passed, resolve to standard Windows Media path
+    if !InStr(audiofile, "\")
+        audiofile := A_WinDir "\Media\" audiofile ".wav"
+
+    ; SND_FILENAME (0x20000) | SND_ASYNC (0x1) | SND_NODEFAULT (0x2) = 0x20003
+    ; Plays sound in background and avoids error beeps if file is missing
+    try DllCall("Winmm.dll\PlaySoundW", "Str", audiofile, "Ptr", 0, "UInt", 0x20003)
+
+    ; Schedule file release if timer is provided
+    if (timer > 0)
+        SetTimer(ReleaseFile, -timer)
+
+    ReleaseFile() {
+        ; Passing 0 as the path cleanly stops playback and releases file handles
+        try DllCall("Winmm.dll\PlaySoundW", "Ptr", 0, "Ptr", 0, "UInt", 0x0)
+    }
 }
 
 ; SPLASHSCREEN

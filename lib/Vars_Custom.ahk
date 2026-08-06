@@ -8,6 +8,12 @@
 ;@region VARS
 ; CUSTOM VARIABLES
 App.Github := "https://github.com/Melo-Professional/Mouse-Wheel-to-Voicemeeter"
+if (App.HasOwnProp("Github")  && App.Github != "" && App.Github != "https://github.com/Melo-Professional/") {
+	App.UpdateAuto := true
+	App.UpdateFrequencyDays := 3
+	App.UpdateLastCheck := ""
+	SaveToINI.Push("App.UpdateAuto", "App.UpdateFrequencyDays", "App.UpdateLastCheck")
+}
 
 Global General := {
     BTDetect:                   true,

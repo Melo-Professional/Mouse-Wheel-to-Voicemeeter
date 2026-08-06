@@ -1,8 +1,8 @@
 /************************************************************************
  * @description Menu Template
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/07/20
- * @version 2.5.1
+ * @date 2026/08/06
+ * @version 2.6.0
  ***********************************************************************/
 
 #Requires AutoHotkey v2.0
@@ -63,6 +63,11 @@ StartMenu() {
         MoreMenu.Add("Help", (*) => %"ShowHelpGUI"%())
     }
     
+    ; 3.1 Check for Updates
+    if IsSet(AutoUpdater) && App.HasOwnProp("Github") && App.Github != "" && App.Github != "https://github.com/Melo-Professional/" {
+        MoreMenu.Add("Update...", (*) => %"Updater"%.ShowUpdaterGUI())
+    }
+
     ; 4. Check for About GUI function
     if IsFunctionDefined("ShowAboutGUI") {
         MoreMenu.Add("About", (*) => %"ShowAboutGUI"%())
