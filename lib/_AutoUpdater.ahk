@@ -1,31 +1,41 @@
 /************************************************************************
  * @description Autod Updater
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/08/06
- * @version 1.3.1
- ***********************************************************************/
+ * @date 2026/08/10
+ * @version 1.5.0
+ ************************************************************************/
 
 #Requires AutoHotkey v2.0
 
 StartAutoUpdater() {
-	global FirstRun, Updater
+    global FirstRun, Updater
 
-	if IsSet(AutoUpdater) && App.HasOwnProp("Github") && App.Github != "" && App.Github != "https://github.com/Melo-Professional/" {
-		if !IsSet(FirstRun) {
-			FirstRun := false
-		}
-		Updater := AutoUpdater(App)
-		Updater.CheckOnStartup(FirstRun)
-	}
+    if IsSet(AutoUpdater) && App.HasOwnProp("Github") && App.Github != "" && App.Github != "https://github.com/Melo-Professional/" {
+        if !IsSet(FirstRun) {
+            FirstRun := false
+        }
+        Updater := AutoUpdater(App)
+        Updater.CheckOnStartup(FirstRun)
+    }
 }
 
 for arg in A_Args {
-	if RegExMatch(arg, "i)^--signal-update-success=(.+)$", &match) {
-		;signalFileUpdate := Trim(match[1], '"')
-		signalFile := Trim(match[1], '"')
-		try FileOpen(signalFile, "w").Write("OK")
-		break
-	}
+    if RegExMatch(arg, "i)^--signal-update-success=(.+)$", &match) {
+        signalData := Trim(match[1], '"')
+        parts := StrSplit(signalData, "|")
+        signalFile := parts[1]
+        
+        ; Write all files and folders that need to be deleted into the signal file
+        try {
+            f := FileOpen(signalFile, "w", "UTF-8")
+            if (parts.Length >= 2 && parts[2] != "")
+                f.WriteLine(parts[2]) ; Backup file path
+            if (parts.Length >= 3 && parts[3] != "")
+                f.WriteLine(parts[3]) ; Updates directory path
+            f.Close()
+        }
+        break
+    }
 }
 
 class AutoUpdater {
@@ -46,16 +56,16 @@ class AutoUpdater {
         if !this.App.HasOwnProp("UpdateLastCheck") || this.App.UpdateLastCheck == ""
             this.App.UpdateLastCheck := "1970-01-01"
 
-		if Debug {
-			tooltip("`n" . "has update auto: " this.App.HasOwnProp("UpdateAuto") .
-					"`n" . "update auto: " this.App.UpdateAuto .
-					"`n" . "has update frequency days: " this.App.HasOwnProp("UpdateFrequencyDays") .
-					"`n" . "frequency days: " this.App.UpdateFrequencyDays .
-					"`n" . "has update last check: " this.App.HasOwnProp("UpdateAuto") .
-					"`n" . "last check: " this.App.UpdateLastCheck .
-					"`n ."
-			)
-		}
+        if Debug {
+            tooltip("`n" . "has update auto: " this.App.HasOwnProp("UpdateAuto") .
+                    "`n" . "update auto: " this.App.UpdateAuto .
+                    "`n" . "has update frequency days: " this.App.HasOwnProp("UpdateFrequencyDays") .
+                    "`n" . "frequency days: " this.App.UpdateFrequencyDays .
+                    "`n" . "has update last check: " this.App.HasOwnProp("UpdateAuto") .
+                    "`n" . "last check: " this.App.UpdateLastCheck .
+                    "`n ."
+            )
+        }
     }
 
     CheckOnStartup(isFirstRun := false) {
@@ -180,13 +190,18 @@ class AutoUpdater {
             urlExt := "." . extMatch[1]
         }
         
-        dlFile := A_Temp . "\app_update_dl_" . A_TickCount . (isZip ? ".zip" : urlExt)
         targetFile := A_ScriptFullPath
         targetDir := A_ScriptDir
-        newExeName := ""
+        
+        Global updatesDir := targetDir . "\." . A_ScriptName . "_updates"
+        
+        if !DirExist(updatesDir)
+            DirCreate(updatesDir)
+            
+        dlFile := updatesDir . "\update-" . this.LatestVersion . (isZip ? ".zip" : urlExt)
+        
         payloadFile := ""
         extractDir := ""
-        sourceDir := ""
 
         try {
             if !silent
@@ -202,349 +217,151 @@ class AutoUpdater {
             return
         }
 
-        ; --- ANTIVIRUS FRIENDLY UNZIP VIA WINDOWS SHELL COM OBJECT ---
+        ; --- NATIVE .NET ZIP EXTRACTION ---
         if isZip {
             if !silent
                 ToolTip(" `nExtracting update...`n ")
-            extractDir := A_Temp . "\ahk_update_ext_" . A_TickCount
-            DirCreate(extractDir)
             
-            try {
-                shell := ComObject("Shell.Application")
-                zipFolder := shell.NameSpace(dlFile)
-                destFolder := shell.NameSpace(extractDir)
-                if (zipFolder && destFolder) {
-                    ; 4 = Do not display a progress dialog box
-                    ; 16 = Respond with "Yes to All" for any dialog box that is displayed
-                    destFolder.CopyHere(zipFolder.Items(), 4 | 16)
-                }
-            } catch Error as err {
-                if !silent
-                    MsgBox("Extraction failed: " . err.Message, "Update Error", "48")
-                return
-            }
+            extractDir := updatesDir . "\extracted-" . this.LatestVersion
+            if DirExist(extractDir)
+                DirDelete(extractDir, true)
+            
+            psUnzip := 'powershell -NoProfile -WindowStyle Hidden -Command "'
+            psUnzip .= 'Add-Type -AssemblyName System.IO.Compression.FileSystem; '
+            psUnzip .= '[System.IO.Compression.ZipFile]::ExtractToDirectory(\"' . dlFile . '\", \"' . extractDir . '\")"'
+            
+            RunWait(psUnzip, , "Hide")
             
             try FileDelete(dlFile)
 
             searchExt := A_IsCompiled ? "exe" : "ahk"
+            extractedExePath := ""
             
-            hasRootFile := false
-            Loop Files, extractDir . "\*." . searchExt {
-                hasRootFile := true
+            Loop Files, extractDir . "\*." . searchExt, "R" {
+                extractedExePath := A_LoopFileFullPath
                 break
-            }
-            
-            if hasRootFile {
-                sourceDir := extractDir
-            } else {
-                Loop Files, extractDir . "\*", "D" {
-                    subDir := A_LoopFileFullPath
-                    Loop Files, subDir . "\*." . searchExt, "R" {
-                        sourceDir := subDir
-                        break 2
-                    }
-                }
-                
-                if (sourceDir == "")
-                    sourceDir := extractDir
-            }
-
-            Loop Files, sourceDir . "\" . A_ScriptName, "R" {
-                newExeName := A_LoopFileName
-                break
-            }
-
-            if (newExeName == "") {
-                Loop Files, sourceDir . "\*." . searchExt, "R" {
-                    newExeName := A_LoopFileName
-                    break
-                }
             }
 
             if !silent
                 ToolTip()
 
-            if (newExeName == "") {
+            if (extractedExePath == "") {
                 if !silent
-                    MsgBox("Failed to locate an updated ." . searchExt . " file inside the downloaded zip archive.", "Update Error", "48")
+                    MsgBox("Failed to locate an updated ." . searchExt . " file inside the downloaded archive.", "Update Error", "48")
                 try DirDelete(extractDir, true)
                 return
             }
+            
+            payloadFile := extractedExePath
         } else {
             payloadFile := dlFile
-            
-            if RegExMatch(this.DownloadUrl, "[^/]+\.[a-zA-Z0-9]+(?=\?|$)", &fileNameMatch) {
-                newExeName := fileNameMatch[0]
-            } else {
-                newExeName := A_ScriptName
-            }
         }
 
-        cmdScript := A_Temp . "\ahk_updater_" . A_TickCount . ".cmd"
-        global signalFile := A_Temp . "\ahk_upd_ok_" . A_TickCount . ".tmp"
-        pid := ProcessExist()
+        Global signalFile := updatesDir . "\ahk_upd_ok.tmp"
         
-        if !RegExMatch(newExeName, "i)\.(exe|ahk)$") {
-            newExeName .= (A_IsCompiled ? ".exe" : ".ahk")
-        }
-
-        newTargetPath := targetDir . "\" . newExeName
+        newTargetPath := targetFile
         
         SplitPath(targetFile, &targetName, &targetDir, &targetExt, &targetNameNoExt)
         backupFileName := targetNameNoExt . "_v" . this.App.Version . "." . targetExt . ".bak"
-        backupFilePath := targetDir . "\" . backupFileName
-        failedFileName := targetNameNoExt . "_FAILED." . targetExt
+        Global backupFilePath := targetDir . "\" . backupFileName
 
-        ; --- ANTIVIRUS FRIENDLY BATCH SCRIPT ---
-        cmdLines := [
-            "@echo off",
-            "timeout /t 2 /nobreak > nul",
-            
-            'if exist "' . backupFilePath . '" del /f /q "' . backupFilePath . '"',
-            'if exist "' . targetDir . '\' . failedFileName . '" del /f /q "' . targetDir . '\' . failedFileName . '"',
+        signalArg := signalFile . "|" . backupFilePath . "|" . updatesDir
 
-            'ren "' . targetFile . '" "' . backupFileName . '"'
-        ]
+        ; --- SAFE POWERSHELL EXECUTION WITH HEALTH CHECK ---
+        psCmd := 'powershell -NoProfile -WindowStyle Hidden -Command "'
+        psCmd .= 'Start-Sleep -Seconds 2; '
+        
+        ; 1. Rename existing executable to backup
+        psCmd .= 'Rename-Item -LiteralPath \"' . targetFile . '\" -NewName \"' . backupFileName . '\" -Force; '
 
-        if isZip {
-            cmdLines.Push('xcopy /e /y /i /q "' . sourceDir . '\*" "' . targetDir . '" > nul')
-            cmdLines.Push('rmdir /s /q "' . extractDir . '"')
-        } else {
-            cmdLines.Push('move /y "' . payloadFile . '" "' . newTargetPath . '" > nul')
-        }
+        ; 2. Install new binary directly over target path
+        psCmd .= 'Copy-Item -LiteralPath \"' . payloadFile . '\" -Destination \"' . newTargetPath . '\" -Force; '
 
+        ; 3. Launch new process passing clean arguments
         if A_IsCompiled {
-            cmdLines.Push('start "" "' . newTargetPath . '" "--signal-update-success=' . signalFile . '"')
+            psCmd .= 'if (Test-Path -LiteralPath \"' . newTargetPath . '\") { Start-Process -FilePath \"' . newTargetPath . '\" -ArgumentList \"--signal-update-success=' . signalArg . '\" }; '
         } else {
-            cmdLines.Push('start "" "' . A_AhkPath . '" "' . newTargetPath . '" "--signal-update-success=' . signalFile . '"')
+            psCmd .= 'if (Test-Path -LiteralPath \"' . newTargetPath . '\") { Start-Process -FilePath \"' . A_AhkPath . '\" -ArgumentList \"\`\"' . newTargetPath . '\`\"\", \"--signal-update-success=' . signalArg . '\" }; '
         }
+
+        ; 4. Monitor health check for up to 10 seconds
+        psCmd .= '$counter = 0; '
+        psCmd .= 'while (-not (Test-Path -LiteralPath \"' . signalFile . '\") -and $counter -lt 10) { Start-Sleep -Seconds 1; $counter++ }; '
         
-        cmdLines.Push('set "counter=0"')
-        cmdLines.Push(':check_health')
-        cmdLines.Push('timeout /t 1 /nobreak > nul')
-        cmdLines.Push('if exist "' . signalFile . '" goto update_success')
-        cmdLines.Push('set /a counter+=1')
-        cmdLines.Push('if %counter% LSS 8 goto check_health')
+        psCmd .= 'if (Test-Path -LiteralPath \"' . signalFile . '\") { '
+        psCmd .= '  Start-Sleep -Milliseconds 500; '
+        psCmd .= '  $toDelete = Get-Content -LiteralPath \"' . signalFile . '\" -ErrorAction SilentlyContinue; '
+        psCmd .= '  Remove-Item -LiteralPath \"' . signalFile . '\" -Force -ErrorAction SilentlyContinue; '
+        psCmd .= '  foreach ($item in $toDelete) { '
+        psCmd .= '    if ($item -and (Test-Path -LiteralPath $item)) { '
+        psCmd .= '      Remove-Item -LiteralPath $item -Recurse -Force -ErrorAction SilentlyContinue '
+        psCmd .= '    } '
+        psCmd .= '  } '
+        psCmd .= '} else { '
+        ; Restoration logic if health check fails
+        psCmd .= '  Remove-Item -LiteralPath \"' . newTargetPath . '\" -Force -ErrorAction SilentlyContinue; '
+        psCmd .= '  Rename-Item -LiteralPath \"' . backupFilePath . '\" -NewName \"' . targetName . '\" -Force -ErrorAction SilentlyContinue; '
+        psCmd .= '}"'
 
-        cmdLines.Push(':update_failed')
-        cmdLines.Push('if exist "' . newTargetPath . '" ren "' . newTargetPath . '" "' . failedFileName . '"')
-        cmdLines.Push('if exist "' . backupFilePath . '" ren "' . backupFilePath . '" "' . targetName . '"')
-        cmdLines.Push('msg * "Update failed to launch properly. Restoring previous working version."')
-        
-        if A_IsCompiled {
-            cmdLines.Push('start "" "' . targetFile . '"')
-        } else {
-            cmdLines.Push('start "" "' . A_AhkPath . '" "' . targetFile . '"')
-        }
-        cmdLines.Push('goto cleanup')
-
-        cmdLines.Push(':update_success')
-        cmdLines.Push('if exist "' . signalFile . '" del /f /q "' . signalFile . '"')
-        cmdLines.Push('if exist "' . backupFilePath . '" del /f /q "' . backupFilePath . '"')
-
-        cmdLines.Push(':cleanup')
-        cmdLines.Push('del "%~f0"')
-
-        cmdContent := ""
-        for line in cmdLines
-            cmdContent .= line . "`r`n"
-
-        FileOpen(cmdScript, "w").Write(cmdContent)
-        
-        Run(A_ComSpec . ' /c "' . cmdScript . '"', , "Hide")
+        Run(psCmd, , "Hide")
         ExitApp()
     }
-/* 
-	ShowUpdaterGUI1() {
+
+    ShowUpdaterGUI() {
         hasUpdate := (this.LatestVersion != "" && this.IsNewerVersion(this.App.Version, this.LatestVersion))
 
         MyGuiTitle := App.Name . " - Update"
-        MyGuiOptions := "+LastFound -SysMenu"
+        MyGuiOptions := "+LastFound -MinimizeBox"
         MyGui := Gui(MyGuiOptions, MyGuiTitle)
         MyGui.SetFont("s" Settings.GuiFontSizeMedium, Settings.GuiFontName)
-        offset := 5
+        offset := 10
 
         if IsFunctionDefined("CustomTitleBar") {
             MyGui.Opt("-Caption")
             titlebar := %"CustomTitleBar"%.Attach(MyGui, {
-                Title: MyGuiTitle,
-                ShowIcon: true,
-                Min: false,
+                Title: "",
+                ShowIcon: false,
+                Min: true,
                 Max: false,
                 Close: true
             })
-            offset := 40
+            offset := 50
             DllCall("dwmapi\DwmSetWindowAttribute", "Ptr", MyGui.Hwnd, "UInt", 33, "Int*", 2, "UInt", 4)
         }
 
-        MyGui.MarginX := 34
-        MyGui.MarginY := 20
-
-		MyGui.SetFont("s" Settings.GuiFontSizeExtraBig, Settings.GuiFontName)
-        txtBannerTitle := MyGui.AddText("vStrong_01 xm w320", "")
-		MyGui.SetFont("s" Settings.GuiFontSizeBig, Settings.GuiFontName)
-        txtBannerSub   := MyGui.AddText("xm w320 y+2", "")
-
-        UpdateBannerUI() {
-            if (this.LatestVersion != "" && this.IsNewerVersion(this.App.Version, this.LatestVersion)) {
-                txtBannerTitle.SetFont("s" Settings.GuiFontSizeExtraBig " bold c0x008000", Settings.GuiFontName)
-                txtBannerTitle.Value := "A new update is available!"
-                txtBannerSub.SetFont("s" Settings.GuiFontSizeBig " Norm", Settings.GuiFontName)
-                txtBannerSub.Value := "Version " . this.LatestVersion . " is ready to install."
-            } else if (this.LatestVersion != "") {
-                txtBannerTitle.SetFont("s" Settings.GuiFontSizeExtraBig " bold c0x2B579A", Settings.GuiFontName)
-                txtBannerTitle.Value := "✓ You're up to date"
-                txtBannerSub.SetFont("s" Settings.GuiFontSizeBig " Norm", Settings.GuiFontName)
-                txtBannerSub.Value := "You are running the latest version."
-            } else {
-                txtBannerTitle.SetFont("s" Settings.GuiFontSizeExtraBig " bold c0x8b8b8b", Settings.GuiFontName)
-                txtBannerTitle.Value := "Update Preferences"
-                txtBannerSub.SetFont("s" Settings.GuiFontSizeBig " Norm", Settings.GuiFontName)
-                txtBannerSub.Value := "Check and manage application updates."
-            }
-			MyGui.SetFont("s" Settings.GuiFontSizeMedium, Settings.GuiFontName)
+        UseAcrylicGUI := false
+        if IsFunctionDefined("FrostedTheme") {
+            UseAcrylicGUI := true
+            offset := 50
         }
 
-        UpdateBannerUI()
+        TextNormalColor := "CCCCCC"
+        TextHoverColor  := "FFFFFF"
+        BGroundNormalColor  := "1b1b1b"
+        BGroundHoverColor   := "313131"
+        isHovering := false
 
-        MyGui.SetFont("s9 Norm", "Segoe UI")
-        
-        MyGui.AddText("xm w120 y+40 c0x666666", "Current Version:")
-        MyGui.SetFont("s9 bold")
-        MyGui.AddText("vStrong_03 x+10 w180 c0x222222", this.App.Version)
+        GuiWidth            := 340
+        BtnWidth            := 100
+        MyGui.MarginX       := 50
+        MyGui.MarginY       := 30
 
-        MyGui.SetFont("s9 Norm")
-        MyGui.AddText("xm y+10 w120 c0x666666", "Latest Version:")
-        MyGui.SetFont("s9 bold")
-        lblLatest := MyGui.AddText("vStrong_04 x+10 w180 c0x222222", this.LatestVersion != "" ? this.LatestVersion : "Not checked")
-
-        MyGui.SetFont("s9 Norm")
-        MyGui.AddText("xm y+10 w120 c0x666666", "Last Checked:")
-        lblLastCheck := MyGui.AddText("x+10 w180 c0x222222", this.App.UpdateLastCheck)
-
-        chkAuto := MyGui.AddCheckbox("xm y+40 Checked" . (this.App.UpdateAuto ? "1" : "0"), " &Enable Automatic Updates")
-        
-        lblFreq := MyGui.AddText("xm y+14 c0x444444", "Check frequency (days):")
-        numFreq := MyGui.AddEdit("x+12 w60 Number Center", this.App.UpdateFrequencyDays)
-        updUpDown := MyGui.AddUpDown("Range1-90", this.App.UpdateFrequencyDays)
-
-        ToggleFreqControls(enabled) {
-            lblFreq.Enabled := enabled
-            numFreq.Enabled := enabled
-            updUpDown.Enabled := enabled
-        }
-        
-        ToggleFreqControls(this.App.UpdateAuto)
-        chkAuto.OnEvent("Click", (*) => ToggleFreqControls(chkAuto.Value != 0))
-
-        btnCheck := MyGui.AddButton("xm y+40 w155 h32", "&Check for Updates")
-        btnUpdate := MyGui.AddButton("x+10 w155 h32 " . (hasUpdate ? "" : "Disabled"), "&Install Update")
-
-        btnSave := MyGui.AddButton("xm y+12 w320 h34", "&Save && Close")
-		btnCheck.OnEvent("Click", _CheckUpdate)
-        btnUpdate.OnEvent("Click", (*) => this.ApplyUpdate(false))
-
-        btnSave.OnEvent("Click", (*) => (
-            this.App.UpdateAuto := (chkAuto.Value != 0),
-            this.App.UpdateFrequencyDays := Integer(numFreq.Value),
-            App.UpdateAuto := this.App.UpdateAuto,
-            App.UpdateFrequencyDays := this.App.UpdateFrequencyDays,
-            App.UpdateLastCheck := this.App.UpdateLastCheck,
-            (Type(SaveINI) == "Func" || Type(SaveINI) == "Closure") ? SaveINI() : "",
-			CleanDestroy()
-        ))
-
-		if IsFunctionDefined("ApplyThemeToGui"){
-			%"ApplyThemeToGui"%(MyGui)
-			%"WatchedGUIs"%.Push(MyGui)
-		}
-
-		MyGui.OnEvent("Close", CleanDestroy)
-		MyGui.OnEvent("Escape", CleanDestroy)
-
-        MyGui.Show()
-		_CheckUpdate()
-
-		_CheckUpdate(*) {
-            btnCheck.Enabled := false,
-            btnCheck.Text := "Checking...",
-            hasUpdate := this.CheckForUpdates(false),
-            lblLastCheck.Value := this.App.UpdateLastCheck,
-            lblLatest.Value := this.LatestVersion != "" ? this.LatestVersion : "Unknown",
-            UpdateBannerUI(),
-            btnUpdate.Enabled := hasUpdate,
-            btnCheck.Text := "&Check for Updates",
-            btnCheck.Enabled := true
-		}
-
-        IsFunctionDefined(Name) {
-            try return HasMethod(%Name%)
-            return false
+        try {
+            MyGui.Add("Picture", "xm y" offset " w32 h32", App.Icon)
+        } catch {
+            MyGui.SetFont("s15 w500")
+            MyGui.Add("Text", "y" offset " w32 h32", "[ i ]")
         }
 
-	    CleanDestroy(*) {
-			if IsFunctionDefined("RemoveGuiFromArray")
-	            %"RemoveGuiFromArray"%(MyGui)
-            MyGui.Destroy()
-		}
-    }
- */
+        MyGui.SetFont("s" Settings.GuiFontSizeBig " w700")
+        MyGui.Add("Text", "x+15 yp vStrong_Title", App.Name)
 
-	ShowUpdaterGUI() {
-		hasUpdate := (this.LatestVersion != "" && this.IsNewerVersion(this.App.Version, this.LatestVersion))
+        MyGui.SetFont("s" Settings.GuiFontSizeSmall " w400 ")
+        MyGui.Add("Text", "y+2 vSmooth_Version", "Version " App.Version)
 
-		MyGuiTitle := App.Name . " - Update"
-		MyGuiOptions := "+LastFound"
-		MyGui := Gui(MyGuiOptions, MyGuiTitle)
-		MyGui.SetFont("s" Settings.GuiFontSizeMedium, Settings.GuiFontName)
-		offset := 10
-
-		UseAcrylicGUI := false
-		if IsFunctionDefined("FrostedTheme") {
-			UseAcrylicGUI := true
-			offset := 50
-		}
-
-		if IsFunctionDefined("CustomTitleBar") {
-			MyGui.Opt("-Caption")
-			titlebar := %"CustomTitleBar"%.Attach(MyGui, {
-				Title: "",
-				ShowIcon: false,
-				Min: true,
-				Max: false,
-				Close: true
-			})
-			offset := 50
-			DllCall("dwmapi\DwmSetWindowAttribute", "Ptr", MyGui.Hwnd, "UInt", 33, "Int*", 2, "UInt", 4)
-		}
-
-		TextNormalColor := "CCCCCC"
-		TextHoverColor  := "FFFFFF"
-		BGroundNormalColor  := "1b1b1b"
-		BGroundHoverColor  := "313131"
-		isHovering := false
-
-		GuiWidth            := 340
-		BtnWidth            := 100
-		MyGui.MarginX       := 50
-		MyGui.MarginY       := 30
-
-		try {
-			MyGui.Add("Picture", "xm y" offset " w32 h32", App.Icon)
-		} catch {
-			MyGui.SetFont("s15 w500")
-			MyGui.Add("Text", "y" offset " w32 h32", "[ i ]")
-		}
-
-		MyGui.SetFont("s" Settings.GuiFontSizeBig " w700")
-		MyGui.Add("Text", "x+15 yp vStrong_Title", App.Name)
-
-		MyGui.SetFont("s" Settings.GuiFontSizeSmall " w400 ")
-		MyGui.Add("Text", "y+2 vSmooth_Version", "Version " App.Version)
-
-		MyGui.SetFont("s" Settings.GuiFontSizeExtraBig, Settings.GuiFontName)
+        MyGui.SetFont("s" Settings.GuiFontSizeExtraBig, Settings.GuiFontName)
         txtBannerTitle := MyGui.AddText("vStrong_01 xm y+40 w320", "")
-		MyGui.SetFont("s" Settings.GuiFontSizeBig, Settings.GuiFontName)
+        MyGui.SetFont("s" Settings.GuiFontSizeBig, Settings.GuiFontName)
         txtBannerSub   := MyGui.AddText("xm w320 y+2", "")
 
         UpdateBannerUI() {
@@ -564,37 +381,37 @@ class AutoUpdater {
                 txtBannerSub.SetFont("s" Settings.GuiFontSizeBig " Norm", Settings.GuiFontName)
                 txtBannerSub.Value := "Check and manage application updates."
             }
-			MyGui.SetFont("s" Settings.GuiFontSizeMedium, Settings.GuiFontName)
+            MyGui.SetFont("s" Settings.GuiFontSizeMedium, Settings.GuiFontName)
         }
 
         UpdateBannerUI()
 
-		MyGui.SetFont("s" Settings.GuiFontSizeSmall " Norm w100")
-		MyGui.AddText("xm w120 y+40", "Current Version:")
+        MyGui.SetFont("s" Settings.GuiFontSizeSmall " Norm w100")
+        MyGui.AddText("xm w120 y+40", "Current Version:")
 
-		MyGui.SetFont("s" Settings.GuiFontSizeMedium " Bold w800")
-		MyGui.AddText("vStrong_03 x+10 w180", this.App.Version)
+        MyGui.SetFont("s" Settings.GuiFontSizeMedium " Bold w800")
+        MyGui.AddText("vStrong_03 x+10 w180", this.App.Version)
 
-		MyGui.SetFont("s" Settings.GuiFontSizeSmall " Norm w100")
-		MyGui.AddText("xm y+10 w120", "Latest Version:")
+        MyGui.SetFont("s" Settings.GuiFontSizeSmall " Norm w100")
+        MyGui.AddText("xm y+10 w120", "Latest Version:")
 
-		MyGui.SetFont("s" Settings.GuiFontSizeMedium " Bold w800")
-		lblLatest := MyGui.AddText("vStrong_04 x+10 w180", this.LatestVersion != "" ? this.LatestVersion : "Not checked")
+        MyGui.SetFont("s" Settings.GuiFontSizeMedium " Bold w800")
+        lblLatest := MyGui.AddText("vStrong_04 x+10 w180", this.LatestVersion != "" ? this.LatestVersion : "Not checked")
 
-		MyGui.SetFont("s" Settings.GuiFontSizeSmall " Norm w100")
-		MyGui.AddText("xm y+10 w120", "Last Checked:")
+        MyGui.SetFont("s" Settings.GuiFontSizeSmall " Norm w100")
+        MyGui.AddText("xm y+10 w120", "Last Checked:")
 
-		lblLastCheck := MyGui.AddText("x+10 w180", this.App.UpdateLastCheck)
+        lblLastCheck := MyGui.AddText("x+10 w180", this.App.UpdateLastCheck)
 
-		MyGui.SetFont("s" Settings.GuiFontSizeMedium " Norm")
+        MyGui.SetFont("s" Settings.GuiFontSizeMedium " Norm")
         chkAuto := MyGui.AddCheckbox("xm y+40 Checked" . (this.App.UpdateAuto ? "1" : "0"))
-		MyGui.AddText("x+0", "Enable Automatic Updates")
+        MyGui.AddText("x+0", "Enable Automatic Updates")
         
         lblFreq := MyGui.AddText("xm y+12 h30 0x0200", "Check frequency (days)")
-		MyGui.SetFont("s" Settings.GuiFontSizeExtraBig " Bold w800")
+        MyGui.SetFont("s" Settings.GuiFontSizeExtraBig " Bold w800")
         numFreq := MyGui.AddEdit("x+40 w60 h30 0x0200 Number Center", this.App.UpdateFrequencyDays)
         updUpDown := MyGui.AddUpDown("Range1-90", this.App.UpdateFrequencyDays)
-		MyGui.SetFont("s" Settings.GuiFontSizeMedium " Norm")
+        MyGui.SetFont("s" Settings.GuiFontSizeMedium " Norm")
 
         ToggleFreqControls(enabled) {
             lblFreq.Enabled := enabled
@@ -605,124 +422,126 @@ class AutoUpdater {
         ToggleFreqControls(this.App.UpdateAuto)
         chkAuto.OnEvent("Click", (*) => ToggleFreqControls(chkAuto.Value != 0))
 
-		MyGui.SetFont("s" Settings.GuiFontSizeMedium " Norm w300", Settings.GuiFontName)
+        MyGui.SetFont("s" Settings.GuiFontSizeMedium " Norm w300", Settings.GuiFontName)
         btnX := (GuiWidth - BtnWidth) // 2
 
-		if UseAcrylicGUI {
-			MyGui.SetFont("s" Settings.GuiFontSizeBig " CWhite w700", Settings.GuiFontName)
-			btnUpdate := MyGui.Add("Text", "x" btnX " y+40 w" BtnWidth " h30 Center 0x0200 Background" BGroundNormalColor " +Border", "Install")
-			btnUpdate.BypassTheme := true
-		} else {
-			MyGui.SetFont("s" Settings.GuiFontSizeMedium " w300", Settings.GuiFontName)
-			btnUpdate := MyGui.AddButton("x" btnX " y+40 w" BtnWidth " h30 Default " . (hasUpdate ? "" : "Disabled"), "&Install")
-		}
+        if UseAcrylicGUI {
+            MyGui.SetFont("s" Settings.GuiFontSizeBig " CWhite w700", Settings.GuiFontName)
+            btnUpdate := MyGui.Add("Text", "x" btnX " y+40 w" BtnWidth " h30 Center 0x0200 Background" BGroundNormalColor " +Border", "Install")
+            btnUpdate.BypassTheme := true
+        } else {
+            MyGui.SetFont("s" Settings.GuiFontSizeMedium " w300", Settings.GuiFontName)
+            btnUpdate := MyGui.AddButton("x" btnX " y+40 w" BtnWidth " h30 Default " . (hasUpdate ? "" : "Disabled"), "&Install")
+        }
 
-		btnUpdate.OnEvent("Click", (*) => (hasUpdate ? this.ApplyUpdate(false) : ""))
-		MyGui.OnEvent("Close", CleanDestroy)
-		MyGui.OnEvent("Escape", CleanDestroy)
+        btnUpdate.OnEvent("Click", (*) => (hasUpdate ? this.ApplyUpdate(false) : ""))
+        MyGui.OnEvent("Close", CleanDestroy)
+        MyGui.OnEvent("Escape", CleanDestroy)
 
-		if UseAcrylicGUI {
-			if IsFunctionDefined("ApplyThemeToGui")
-				%"ApplyThemeToGui"%(MyGui, "Dark")
-			if IsFunctionDefined("FrostedTheme")
-				%"FrostedTheme"%.Apply(MyGui)
-		} else {
-			ApplyThemeToGui(MyGui)
-			WatchedGUIs.Push(MyGui)
-		}
+        if UseAcrylicGUI {
+            if IsFunctionDefined("ApplyThemeToGui")
+                %"ApplyThemeToGui"%(MyGui, "Dark")
+            if IsFunctionDefined("FrostedTheme")
+                %"FrostedTheme"%.Apply(MyGui)
+        } else {
+            if IsFunctionDefined("ApplyThemeToGui") {
+                %"ApplyThemeToGui"%(MyGui)
+                %"WatchedGUIs"%.Push(MyGui)
+            }
+        }
 
-		MyGui.Show("w" GuiWidth)
-		UpdateBannerUI()
+        MyGui.Show("w" GuiWidth)
+        UpdateBannerUI()
 
-		_CheckUpdate()
+        _CheckUpdate()
 
-		_CheckUpdate(*) {
+        _CheckUpdate(*) {
             hasUpdate := this.CheckForUpdates(false)
             lblLastCheck.Value := this.App.UpdateLastCheck
             lblLatest.Value := this.LatestVersion != "" ? this.LatestVersion : "Unknown"
             UpdateBannerUI()
             try btnUpdate.Enabled := hasUpdate
-		}
+        }
 
-		if (App.Github || UseAcrylicGUI) {
-			if IsSet(MessageManager) {
-				MessageManager.Register(0x0200, OnMouseMoveMyGui)
-			} else {
-				OnMessage(0x0200, OnMouseMoveMyGui)
-			}
-		}
+        if (App.Github || UseAcrylicGUI) {
+            if IsSet(MessageManager) {
+                MessageManager.Register(0x0200, OnMouseMoveMyGui)
+            } else {
+                OnMessage(0x0200, OnMouseMoveMyGui)
+            }
+        }
 
-		OnMouseMoveMyGui(wParam, lParam, msg, hwnd) {
-			try {
-				if (!btnUpdate)
-					return
-			} catch {
-				return
-			}
-			
-			if (hwnd == btnUpdate.Hwnd) {
-				ctrl := GuiCtrlFromHwnd(hwnd)
+        OnMouseMoveMyGui(wParam, lParam, msg, hwnd) {
+            try {
+                if (!btnUpdate)
+                    return
+            } catch {
+                return
+            }
+            
+            if (hwnd == btnUpdate.Hwnd) {
+                ctrl := GuiCtrlFromHwnd(hwnd)
 
-				if (!isHovering) {
-						isHovering := true
-						
-						TRACKMOUSEEVENT := Buffer(A_PtrSize == 8 ? 24 : 16, 0)
-						NumPut("UInt", TRACKMOUSEEVENT.Size, TRACKMOUSEEVENT, 0)
-						NumPut("UInt", 2,                    TRACKMOUSEEVENT, 4)
-						NumPut("Ptr",  ctrl.Hwnd,          TRACKMOUSEEVENT, A_PtrSize == 8 ? 8 : 8)
-						DllCall("TrackMouseEvent", "Ptr", TRACKMOUSEEVENT)
-						
-						if IsSet(MessageManager) {
-							MessageManager.Register(0x02A3, OnMouseLeaveMyGui)
-						} else {
-							OnMessage(0x02A3, OnMouseLeaveMyGui)
-						}
-				}
-				if UseAcrylicGUI {
-					ctrl.SetFont("c" TextHoverColor)
-					ctrl.Opt("+Background" BGroundHoverColor)
-				}
-			}
-		}    
+                if (!isHovering) {
+                        isHovering := true
+                        
+                        TRACKMOUSEEVENT := Buffer(A_PtrSize == 8 ? 24 : 16, 0)
+                        NumPut("UInt", TRACKMOUSEEVENT.Size, TRACKMOUSEEVENT, 0)
+                        NumPut("UInt", 2,                    TRACKMOUSEEVENT, 4)
+                        NumPut("Ptr",  ctrl.Hwnd,          TRACKMOUSEEVENT, A_PtrSize == 8 ? 8 : 8)
+                        DllCall("TrackMouseEvent", "Ptr", TRACKMOUSEEVENT)
+                        
+                        if IsSet(MessageManager) {
+                            MessageManager.Register(0x02A3, OnMouseLeaveMyGui)
+                        } else {
+                            OnMessage(0x02A3, OnMouseLeaveMyGui)
+                        }
+                }
+                if UseAcrylicGUI {
+                    ctrl.SetFont("c" TextHoverColor)
+                    ctrl.Opt("+Background" BGroundHoverColor)
+                }
+            }
+        }    
 
-		OnMouseLeaveMyGui(wParam, lParam, msg, hwnd) {
-			try {
-				if (hwnd == btnUpdate.Hwnd && UseAcrylicGUI) {
-					ctrl := GuiCtrlFromHwnd(hwnd)
-					ctrl.SetFont("c" TextNormalColor)
-					ctrl.Opt("+Background" BGroundNormalColor)
-					isHovering := false
-				}
-			}
-		}
+        OnMouseLeaveMyGui(wParam, lParam, msg, hwnd) {
+            try {
+                if (hwnd == btnUpdate.Hwnd && UseAcrylicGUI) {
+                    ctrl := GuiCtrlFromHwnd(hwnd)
+                    ctrl.SetFont("c" TextNormalColor)
+                    ctrl.Opt("+Background" BGroundNormalColor)
+                    isHovering := false
+                }
+            }
+        }
 
-		SaveValues(*) {
+        SaveValues(*) {
             this.App.UpdateAuto := (chkAuto.Value != 0)
             this.App.UpdateFrequencyDays := Integer(numFreq.Value)
             App.UpdateAuto := this.App.UpdateAuto
             App.UpdateFrequencyDays := this.App.UpdateFrequencyDays
             App.UpdateLastCheck := this.App.UpdateLastCheck
             (Type(SaveINI) == "Func" || Type(SaveINI) == "Closure") ? SaveINI() : ""
-		}
+        }
 
-		CleanDestroy(*) {
-			SaveValues()
-			if IsSet(MessageManager) {
-				MessageManager.Unregister(0x0200, OnMouseMoveMyGui)
-				MessageManager.Unregister(0x02A3, OnMouseLeaveMyGui)
-			} else {
-				OnMessage(0x0200, OnMouseMoveMyGui, 0)
-				OnMessage(0x02A3, OnMouseLeaveMyGui, 0)
-			}
-			
-			if IsFunctionDefined("RemoveGuiFromArray")
-				%"RemoveGuiFromArray"%(MyGui)
-			MyGui.Destroy()
-		}
+        CleanDestroy(*) {
+            SaveValues()
+            if IsSet(MessageManager) {
+                MessageManager.Unregister(0x0200, OnMouseMoveMyGui)
+                MessageManager.Unregister(0x02A3, OnMouseLeaveMyGui)
+            } else {
+                OnMessage(0x0200, OnMouseMoveMyGui, 0)
+                OnMessage(0x02A3, OnMouseLeaveMyGui, 0)
+            }
+            
+            if IsFunctionDefined("RemoveGuiFromArray")
+                %"RemoveGuiFromArray"%(MyGui)
+            MyGui.Destroy()
+        }
 
-		IsFunctionDefined(Name) {
-			try return HasMethod(%Name%)
-			return false
-		}
-	}
+        IsFunctionDefined(Name) {
+            try return HasMethod(%Name%)
+            return false
+        }
+    }
 }

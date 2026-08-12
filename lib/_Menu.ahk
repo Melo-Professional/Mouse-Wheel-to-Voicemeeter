@@ -2,7 +2,7 @@
  * @description Menu Template
  * @author Melo (melo@meloprofessional.com)
  * @date 2026/08/06
- * @version 2.6.0
+ * @version 2.7.0
  ***********************************************************************/
 
 #Requires AutoHotkey v2.0
@@ -15,6 +15,7 @@ StartMenu() {
     
     appName := HasMethod(App ?? "", "HasProp") && App.HasProp("Name") ? App.Name : A_ScriptName
     A_IconTip := appName
+	DllCall("shell32\SetCurrentProcessExplicitAppUserModelID", "wstr", appName)
     
     TrayMenu                := A_TrayMenu
     TrayMenu.ClickCount     := 1
