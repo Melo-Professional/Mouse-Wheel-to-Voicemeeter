@@ -1,8 +1,8 @@
 /************************************************************************
  * @description Autod Updater
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/08/10
- * @version 1.5.0
+ * @date 2026/08/12
+ * @version 1.5.100
  ************************************************************************/
 
 #Requires AutoHotkey v2.0
@@ -183,6 +183,9 @@ class AutoUpdater {
         if (Type(SaveINI) == "Func" || Type(SaveINI) == "Closure")
             SaveINI()
 
+        ; Helper function for PowerShell single-quoted literal escaping
+        ps_str(str) => "'" . StrReplace(str, "'", "''") . "'"
+
         isZip := RegExMatch(this.DownloadUrl, "i)\.zip(\?|$)") || RegExMatch(this.DownloadUrl, "i)/zipball/")
         
         urlExt := A_IsCompiled ? ".exe" : ".ahk"
@@ -191,9 +194,12 @@ class AutoUpdater {
         }
         
         targetFile := A_ScriptFullPath
-        targetDir := A_ScriptDir
+        SplitPath(targetFile, &targetName, &targetDir, &targetExt, &targetNameNoExt)
         
-        Global updatesDir := targetDir . "\." . A_ScriptName . "_updates"
+        ; Sanitize script name for safe file/folder naming (replaces spaces/special chars with underscores)
+        cleanName := RegExReplace(targetNameNoExt, "[^\w\-]", "_")
+        
+        Global updatesDir := targetDir . "\." . cleanName . "_updates"
         
         if !DirExist(updatesDir)
             DirCreate(updatesDir)
@@ -228,7 +234,7 @@ class AutoUpdater {
             
             psUnzip := 'powershell -NoProfile -WindowStyle Hidden -Command "'
             psUnzip .= 'Add-Type -AssemblyName System.IO.Compression.FileSystem; '
-            psUnzip .= '[System.IO.Compression.ZipFile]::ExtractToDirectory(\"' . dlFile . '\", \"' . extractDir . '\")"'
+            psUnzip .= '[System.IO.Compression.ZipFile]::ExtractToDirectory(' . ps_str(dlFile) . ', ' . ps_str(extractDir) . ')"'
             
             RunWait(psUnzip, , "Hide")
             
@@ -260,9 +266,7 @@ class AutoUpdater {
         Global signalFile := updatesDir . "\ahk_upd_ok.tmp"
         
         newTargetPath := targetFile
-        
-        SplitPath(targetFile, &targetName, &targetDir, &targetExt, &targetNameNoExt)
-        backupFileName := targetNameNoExt . "_v" . this.App.Version . "." . targetExt . ".bak"
+        backupFileName := cleanName . "_v" . this.App.Version . "." . targetExt . ".bak"
         Global backupFilePath := targetDir . "\" . backupFileName
 
         signalArg := signalFile . "|" . backupFilePath . "|" . updatesDir
@@ -272,26 +276,26 @@ class AutoUpdater {
         psCmd .= 'Start-Sleep -Seconds 2; '
         
         ; 1. Rename existing executable to backup
-        psCmd .= 'Rename-Item -LiteralPath \"' . targetFile . '\" -NewName \"' . backupFileName . '\" -Force; '
+        psCmd .= 'Rename-Item -LiteralPath ' . ps_str(targetFile) . ' -NewName ' . ps_str(backupFileName) . ' -Force; '
 
         ; 2. Install new binary directly over target path
-        psCmd .= 'Copy-Item -LiteralPath \"' . payloadFile . '\" -Destination \"' . newTargetPath . '\" -Force; '
+        psCmd .= 'Copy-Item -LiteralPath ' . ps_str(payloadFile) . ' -Destination ' . ps_str(newTargetPath) . ' -Force; '
 
-        ; 3. Launch new process passing clean arguments
+        ; 3. Launch new process passing clean arguments with embedded double quotes
         if A_IsCompiled {
-            psCmd .= 'if (Test-Path -LiteralPath \"' . newTargetPath . '\") { Start-Process -FilePath \"' . newTargetPath . '\" -ArgumentList \"--signal-update-success=' . signalArg . '\" }; '
+            psCmd .= 'if (Test-Path -LiteralPath ' . ps_str(newTargetPath) . ') { Start-Process -FilePath ' . ps_str(newTargetPath) . ' -ArgumentList ' . ps_str('"' . '--signal-update-success=' . signalArg . '"') . ' }; '
         } else {
-            psCmd .= 'if (Test-Path -LiteralPath \"' . newTargetPath . '\") { Start-Process -FilePath \"' . A_AhkPath . '\" -ArgumentList \"\`\"' . newTargetPath . '\`\"\", \"--signal-update-success=' . signalArg . '\" }; '
+            psCmd .= 'if (Test-Path -LiteralPath ' . ps_str(newTargetPath) . ') { Start-Process -FilePath ' . ps_str(A_AhkPath) . ' -ArgumentList @(' . ps_str('"' . newTargetPath . '"') . ', ' . ps_str('"' . '--signal-update-success=' . signalArg . '"') . ') }; '
         }
 
         ; 4. Monitor health check for up to 10 seconds
         psCmd .= '$counter = 0; '
-        psCmd .= 'while (-not (Test-Path -LiteralPath \"' . signalFile . '\") -and $counter -lt 10) { Start-Sleep -Seconds 1; $counter++ }; '
+        psCmd .= 'while (-not (Test-Path -LiteralPath ' . ps_str(signalFile) . ') -and $counter -lt 10) { Start-Sleep -Seconds 1; $counter++ }; '
         
-        psCmd .= 'if (Test-Path -LiteralPath \"' . signalFile . '\") { '
+        psCmd .= 'if (Test-Path -LiteralPath ' . ps_str(signalFile) . ') { '
         psCmd .= '  Start-Sleep -Milliseconds 500; '
-        psCmd .= '  $toDelete = Get-Content -LiteralPath \"' . signalFile . '\" -ErrorAction SilentlyContinue; '
-        psCmd .= '  Remove-Item -LiteralPath \"' . signalFile . '\" -Force -ErrorAction SilentlyContinue; '
+        psCmd .= '  $toDelete = Get-Content -LiteralPath ' . ps_str(signalFile) . ' -ErrorAction SilentlyContinue; '
+        psCmd .= '  Remove-Item -LiteralPath ' . ps_str(signalFile) . ' -Force -ErrorAction SilentlyContinue; '
         psCmd .= '  foreach ($item in $toDelete) { '
         psCmd .= '    if ($item -and (Test-Path -LiteralPath $item)) { '
         psCmd .= '      Remove-Item -LiteralPath $item -Recurse -Force -ErrorAction SilentlyContinue '
@@ -299,8 +303,8 @@ class AutoUpdater {
         psCmd .= '  } '
         psCmd .= '} else { '
         ; Restoration logic if health check fails
-        psCmd .= '  Remove-Item -LiteralPath \"' . newTargetPath . '\" -Force -ErrorAction SilentlyContinue; '
-        psCmd .= '  Rename-Item -LiteralPath \"' . backupFilePath . '\" -NewName \"' . targetName . '\" -Force -ErrorAction SilentlyContinue; '
+        psCmd .= '  Remove-Item -LiteralPath ' . ps_str(newTargetPath) . ' -Force -ErrorAction SilentlyContinue; '
+        psCmd .= '  Rename-Item -LiteralPath ' . ps_str(backupFilePath) . ' -NewName ' . ps_str(targetName) . ' -Force -ErrorAction SilentlyContinue; '
         psCmd .= '}"'
 
         Run(psCmd, , "Hide")
