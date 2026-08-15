@@ -1,8 +1,8 @@
 /************************************************************************
  * @description Autod Updater
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/08/12
- * @version 1.5.100
+ * @date 2026/08/15
+ * @version 1.5.101
  ************************************************************************/
 
 #Requires AutoHotkey v2.0
@@ -318,32 +318,44 @@ class AutoUpdater {
         MyGuiOptions := "+LastFound -MinimizeBox"
         MyGui := Gui(MyGuiOptions, MyGuiTitle)
         MyGui.SetFont("s" Settings.GuiFontSizeMedium, Settings.GuiFontName)
-        offset := 10
+		DllCall("dwmapi\DwmSetWindowAttribute", "Ptr", MyGui.Hwnd, "UInt", 33, "Int*", 2, "UInt", 4)
+        offset := 20
 
         if IsFunctionDefined("CustomTitleBar") {
             MyGui.Opt("-Caption")
             titlebar := %"CustomTitleBar"%.Attach(MyGui, {
                 Title: "",
                 ShowIcon: false,
-                Min: true,
+                Min: false,
                 Max: false,
                 Close: true
             })
             offset := 50
-            DllCall("dwmapi\DwmSetWindowAttribute", "Ptr", MyGui.Hwnd, "UInt", 33, "Int*", 2, "UInt", 4)
         }
 
-        UseAcrylicGUI := false
-        if IsFunctionDefined("FrostedTheme") {
-            UseAcrylicGUI := true
-            offset := 50
-        }
+		UseAcrylicGUI := IsFunctionDefined("FrostedTheme")
+		if UseAcrylicGUI
+			offset := 30
 
-        TextNormalColor := "CCCCCC"
-        TextHoverColor  := "FFFFFF"
-        BGroundNormalColor  := "1b1b1b"
-        BGroundHoverColor   := "313131"
-        isHovering := false
+    ; Color Constants
+	TextNormalColor				:= Settings.Theme.%CurrentActualTheme%.TextSmooth
+	TextHoverColor				:= Settings.Theme.%CurrentActualTheme%.TextDefault
+	BGroundNormalColor			:= Settings.Theme.%CurrentActualTheme%.Bg
+	BGroundHoverColor			:= Settings.Theme.%CurrentActualTheme%.BgHover
+	GitNormalColor				:= "5865F2"
+	GitHoverColor				:= "5896f2"
+
+	if UseAcrylicGUI {
+		TextNormalColor			:= "CCCCCC"
+		TextHoverColor			:= "FFFFFF"
+		BGroundNormalColor		:= "1b1b1b"
+		BGroundHoverColor		:= "313131"
+		GitNormalColor			:= "5865F2"
+		GitHoverColor			:= "5896f2"
+	}
+	
+	
+	    isHovering := false
 
         GuiWidth            := 340
         BtnWidth            := 100
@@ -380,7 +392,7 @@ class AutoUpdater {
                 txtBannerSub.SetFont("s" Settings.GuiFontSizeBig " Norm", Settings.GuiFontName)
                 txtBannerSub.Value := "You are running the latest version."
             } else {
-                txtBannerTitle.SetFont("s" Settings.GuiFontSizeExtraBig " bold c0x8b8b8b", Settings.GuiFontName)
+                txtBannerTitle.SetFont("s" Settings.GuiFontSizeExtraBig " bold c" TextHoverColor, Settings.GuiFontName)
                 txtBannerTitle.Value := "Update Preferences"
                 txtBannerSub.SetFont("s" Settings.GuiFontSizeBig " Norm", Settings.GuiFontName)
                 txtBannerSub.Value := "Check and manage application updates."
@@ -407,7 +419,14 @@ class AutoUpdater {
 
         lblLastCheck := MyGui.AddText("x+10 w180", this.App.UpdateLastCheck)
 
-        MyGui.SetFont("s" Settings.GuiFontSizeMedium " Norm")
+		; GitHub Link
+        MyGui.SetFont("s" Settings.GuiFontSizeBig " c" GitNormalColor " w800")
+        MyLink := MyGui.Add("Text", "-Tabstop xm y+10", "View Release Notes on GitHub...")
+        MyLink.OnEvent("Click", (*) => Run(App.Github . "/releases"))
+        MyLink.BypassTheme := true
+
+
+        MyGui.SetFont("s" Settings.GuiFontSizeMedium " Norm w100")
         chkAuto := MyGui.AddCheckbox("xm y+40 Checked" . (this.App.UpdateAuto ? "1" : "0"))
         MyGui.AddText("x+0", "Enable Automatic Updates")
         
@@ -441,6 +460,26 @@ class AutoUpdater {
         btnUpdate.OnEvent("Click", (*) => (hasUpdate ? this.ApplyUpdate(false) : ""))
         MyGui.OnEvent("Close", CleanDestroy)
         MyGui.OnEvent("Escape", CleanDestroy)
+
+
+
+		if IsSet(GuiTracker) {
+			tracker := GuiTracker()
+			tracker.AddGui := MyGui
+
+			tracker.RegisterControl(btnUpdate, Map(
+				"OnEnter", (ctrl) => (hasUpdate ? (ctrl.SetFont("c" TextHoverColor), ctrl.Opt("+Background" BGroundHoverColor)) : ""),
+				"OnLeave", (ctrl) => (hasUpdate ? (ctrl.SetFont("c" TextNormalColor), ctrl.Opt("+Background" BGroundNormalColor))  : "")
+			))
+
+			tracker.RegisterControl(MyLink, Map(
+				"OnEnter", (ctrl) => ctrl.SetFont("c" GitHoverColor),
+				"OnLeave", (ctrl) => ctrl.SetFont("c" GitNormalColor)
+			))
+		}
+
+
+
 
         if UseAcrylicGUI {
             if IsFunctionDefined("ApplyThemeToGui")

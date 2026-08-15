@@ -41,13 +41,15 @@ Global Settings := {
 ; GUI Colors
     Theme: {
         Dark: {
-            Bg:                 "202020", 
+            Bg:                 "1b1b1b", 
+            BgHover:            "313131", 
             TextDefault:        "CCCCCC",
             TextStrong:         "FFFFFF",
             TextSmooth:         "888888" 
         },
         Light: {
             Bg:                 "F0F0F0", 
+            BgHover:            "e0e0e0", 
             TextDefault:        "222222",
             TextStrong:         "000000",
             TextSmooth:         "666666" 

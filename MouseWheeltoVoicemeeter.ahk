@@ -2,9 +2,9 @@
 /************************************************************************
  * @description Control Voicemeeter virtual Inputs volumes using the mouse wheel over the taskbar.
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/08/12
+ * @date 2026/08/13
  * @releasedate 2022/05/11
- * @version 3.69.0.100
+ * @version 3.69.2.0
  * @github https://github.com/Melo-Professional/Mouse-Wheel-to-Voicemeeter
  * @credits VMR AHK https://github.com/SaifAqqad/VMR.ahk
  * @credits trismarck code from here: https://www.autohotkey.com/board/topic/96139-detect-screen-edges-two-monitors/
@@ -26,7 +26,7 @@ osd_manager:
 
 AppName := "Mouse Wheel to Voicemeeter"
 ;@Ahk2Exe-Let U_AppName = %A_PriorLine%
-AppVersion := "3.69.0.100"
+AppVersion := "3.69.2.0"
 ;@Ahk2Exe-Let U_Version = %A_PriorLine%
 AppDescription := "Control Voicemeeter virtual Inputs volumes using the mouse wheel over the taskbar."
 ;@endregion
@@ -50,15 +50,16 @@ CoordMode("Mouse", "Screen")
 #Include *i <_CompilerDirectives>
 #Include *i <_Backup>
 #Include *i <_Config&Vars>
-#Include *i <_MsgBoxCustom>
+#Include *i <_HelperFuncs>
 #Include *i <_SaveSettings>
 ;#Include *i <_MessageManager>
+;#Include *i <_TrayIconHandler>
 #Include *i <_Theme>
 ;#Include *i <_FrostedTheme>
 #Include *i <_TitleBar>
+#Include *i <_GuiTracker>
 ;#Include *i <_ModernSlider>
 #Include *i <_Color_Picker_Dialog>
-;#Include *i <_ReloadWithArgs>
 ;#Include *i <_HotkeysRecorder>
 ;#Include *i <_ODColors>
 ;#Include *i <_OSDCustom>
@@ -78,13 +79,9 @@ CoordMode("Mouse", "Screen")
 ;@endregion
 
 ;@region Startup
-; TRAY ICON + MENU
-StartMenu()
-Menu_Custom()
-if IsSet(StartAutoUpdater) {
-	%"StartAutoUpdater"%()
-}
-
+IsFunctionDefined("StartMenu")			? %"StartMenu"%()			: ""
+IsFunctionDefined("Menu_Custom")		? %"Menu_Custom"%()			: ""
+IsFunctionDefined("StartAutoUpdater")	? %"StartAutoUpdater"%()	: ""
 ;@endregion
 ;@endregion
 
@@ -93,65 +90,11 @@ LoginVMR()
 ;@endregion
 
 ;@region Monitor, Faders and Current Gains
-/* monCount := MonitorGetCount()
-mon := []
-Loop monCount {
-    MonitorGet(A_Index, &Left, &Top, &Right, &Bottom)
-    mon.Push({Left: Left, Top: Top, Right: Right, Bottom: Bottom})
-}
- */
-/* 
-Faders := []
-switch voicemeeter.Type.Name {
-    case "Voicemeeter":     Faders := [3]
-    case "Voicemeeter Banana": Faders := [4, 5]
-    case "Voicemeeter Potato": Faders := [6, 7, 8]
-} */
-
 Faders := GetFaders()
 ListenAndLastGainValues()
 
-; HELPER FUNCTIONS
-/* 
-SoundPlayWin(audiofile := "Windows Notify", timer := 3000) {
-
-    if !InStr(audiofile, "\")
-        audiofile := A_WinDir "\Media\" audiofile ".wav"
-
-    try SoundPlay(audiofile)
-    SetTimer(ReleaseFile,-timer)
-    ReleaseFile(){
-    try SoundPlay("NON-EXISTENT.wav")  ; releases previously played file from "in use"
-  }
-}
- */
-
-SoundPlayWin(audiofile := "Windows Notify", timer := 3000) {
-    ; If relative/short name passed, resolve to standard Windows Media path
-    if !InStr(audiofile, "\")
-        audiofile := A_WinDir "\Media\" audiofile ".wav"
-
-    ; SND_FILENAME (0x20000) | SND_ASYNC (0x1) | SND_NODEFAULT (0x2) = 0x20003
-    ; Plays sound in background and avoids error beeps if file is missing
-    try DllCall("Winmm.dll\PlaySoundW", "Str", audiofile, "Ptr", 0, "UInt", 0x20003)
-
-    ; Schedule file release if timer is provided
-    if (timer > 0)
-        SetTimer(ReleaseFile, -timer)
-
-    ReleaseFile() {
-        ; Passing 0 as the path cleanly stops playback and releases file handles
-        try DllCall("Winmm.dll\PlaySoundW", "Ptr", 0, "Ptr", 0, "UInt", 0x0)
-    }
-}
-
-; SPLASHSCREEN
-if IsSet(SplashScreen){
-;    SplashScreen("Banner", false)       ; show banner and wait
-;    sleep(5000)
-;    SplashScreen()                      ; shows default / destroys
-;    SplashScreen("Icon")                ; show icon and destroys
-SplashScreen()
+if !A_Args.Length && IsSet(SplashScreen) {
+    SplashScreen()
 }
 ;@endregion
 
