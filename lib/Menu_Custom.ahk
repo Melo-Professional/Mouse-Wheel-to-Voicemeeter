@@ -28,16 +28,6 @@ Menu_Custom() {
     MoreMenu.Insert("1&", "Settings...", (*) => ShowOptionsGUI())
     MoreMenu.Insert("2&", "OSD Options...", (*) => ShowOSDOptionsGUI())
     MoreMenu.Insert("3&")
-    MoreMenu.Insert("About", "GitHub Repo", Repo)
-;    MoreMenu.Add("GitHub Repo", Repo)
-
-    Repo(*) {
-        Run(App.Github)
-    }
-
-
-
-
 
     ; Custom items
 /*

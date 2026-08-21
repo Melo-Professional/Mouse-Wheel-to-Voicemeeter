@@ -1,8 +1,8 @@
 /************************************************************************
  * @description QOL helper functions
  * @author Melo (melo@meloprofessional.com) and Pj
- * @date 2026/08/12
- * @version 1.0.0
+ * @date 2026/08/18
+ * @version 1.1.0
  ***********************************************************************/
 
 
@@ -161,14 +161,14 @@ MsgBoxCustom(Text := "Message", Title := "Warning", Buttons := "OK", errorValue?
     MyGui := Gui(MyGuiOptions, MyGuiTitle)
 
     ; Layout Configuration
-    FontSize        := DPIScale(10)
-    btnGap          := DPIScale(10)
-    btnW            := DPIScale(90)
-    btnH            := DPIScale(30)
-    MyGui.MarginX   := DPIScale(30)
-    MyGui.MarginY   := DPIScale(25)
-    GuiMinWidth     := DPIScale(300)
-    GuiMaxWidth     := DPIScale(660)
+    FontSize        := 10
+    btnGap          := 10
+    btnW            := 90
+    btnH            := 30
+    MyGui.MarginX   := 30
+    MyGui.MarginY   := 25
+    GuiMinWidth     := 300
+    GuiMaxWidth     := 660
     
     static Result := ""
     Result := "" ; Reset to prevent click-bleeding
@@ -191,7 +191,7 @@ MsgBoxCustom(Text := "Message", Title := "Warning", Buttons := "OK", errorValue?
 
     ; 2. Primary Message Text
     ; Specifying a width constraint allows AHK to calculate text wrapping heights perfectly
-    txtCtrl := MyGui.AddText("Left w" (GuiMinWidth - DPIScale(60)), Text)
+    txtCtrl := MyGui.AddText("Left w" (GuiMinWidth - 60), Text)
 
     ; 3. System Error Block (Using an Edit Control to prevent clipping)
 ; Create a master report variable starting with the main display text
@@ -217,7 +217,7 @@ MsgBoxCustom(Text := "Message", Title := "Warning", Buttons := "OK", errorValue?
         LineCount := StrSplit(errorValueText, "`n").Length
         EditHeight := Min(Max(LineCount * 20, 100), 350)
 
-        GotError := MyGui.AddEdit("Left r" LineCount " w" (GuiMaxWidth - DPIScale(60)) " ReadOnly -E0x200 -WantReturn", errorValueText)
+        GotError := MyGui.AddEdit("Left r" LineCount " w" (GuiMaxWidth - 60) " ReadOnly -E0x200 -WantReturn", errorValueText)
         GotError.Move(,, GuiMinWidth - 60, EditHeight)
         
         ; Copies ALL messages combined to the clipboard

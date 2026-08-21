@@ -1,25 +1,28 @@
 /************************************************************************
  * @description Config&Vars
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/07/29
+ * @date 2026/08/16
  * @version 1.6.0
  ***********************************************************************/
 
 ;@region Configuration
-Debug                       := false
-A_ScriptName                := AppName
-CurrentActualTheme          := "Light"
-NameNoSpace                 := StrReplace(AppName, " ")
+Debug							:= false
+A_ScriptName					:= AppName
+CurrentActualTheme				:= "Light"
+NameNoSpace						:= StrReplace(AppName, " ")
 Global App := {
-    Name:                       AppName,
-    NameNoSpace:                NameNoSpace,
-    NameCutted:                 AppName,
-    Description:                AppDescription,
-    Icon:                       A_IsCompiled ? A_ScriptFullPath : A_ScriptDir "\resources\app.ico",
-    IconPaused:                 A_IsCompiled ? A_ScriptFullPath : A_ScriptDir "\resources\app_Pause.ico",
-    Copyright:                  "Developed by Melo`nmelo@meloprofessional.com`n©Melo. All rights reserved.",
-    Version:                    AppVersion,
-    Github:                    ""
+    Name:						AppName,
+    NameNoSpace:				NameNoSpace,
+    NameCutted:					AppName,
+    Description:				AppDescription,
+    Icon:						A_IsCompiled ? A_ScriptFullPath : A_ScriptDir "\resources\app.ico",
+    IconPaused:					A_IsCompiled ? A_ScriptFullPath : A_ScriptDir "\resources\app_Pause.ico",
+    Copyright:					"Developed by Melo`nmelo@meloprofessional.com`n©Melo. All rights reserved.",
+    Version:					AppVersion,
+    Github:						"https://github.com/Melo-Professional/",
+	UpdateAuto:					true,
+	UpdateFrequencyDays:		3,
+	UpdateLastCheck:			""
 }
 
 Global Settings := {
@@ -56,11 +59,4 @@ Global Settings := {
         }
     }
 }
-;@endregion
-
-;@region INI
-SaveToINI := ["Settings.DesiredTheme"] ; what to save to INI file
-;SaveToINI.Push("Settings.SplashScreen")     ; add more to INI file
-RegisterArrayItems(SaveToINI)
-LoadINI()
 ;@endregion

@@ -7,13 +7,8 @@
 
 ;@region VARS
 ; CUSTOM VARIABLES
-App.Github := "https://github.com/Melo-Professional/Mouse-Wheel-to-Voicemeeter"
-if (App.HasOwnProp("Github")  && App.Github != "" && App.Github != "https://github.com/Melo-Professional/") {
-	App.UpdateAuto := true
-	App.UpdateFrequencyDays := 3
-	App.UpdateLastCheck := ""
-	SaveToINI.Push("App.UpdateAuto", "App.UpdateFrequencyDays", "App.UpdateLastCheck")
-}
+App.GitHubRepo := "https://github.com/Melo-Professional/Mouse-Wheel-to-Voicemeeter"
+
 
 Global General := {
     BTDetect:                   true,
@@ -88,11 +83,12 @@ ResetOSDSettings    := OSDSettings.Clone()
 ResetGeneral        := General.Clone()
 
 App.NameCutted := "Mouse Wheel`nto Voicemeeter"
-;Settings.SplashScreen := "Icon"
+Settings.SplashScreen := "Icon"
 ;Debug := true
-;@endregion
 
 ;@region INI
+SaveToINI := []
+;SaveToINI.Push("Settings.SplashScreen")     ; add more to INI file
 SaveToINI.Push("Settings.SplashScreen", "Settings.BTDetect",
             "Settings.WheelSpeed", "OSDSettings.UseOSD", "OSDSettings.TimeOut",
             "OSDSettings.Width", "OSDSettings.FontSize", "OSDSettings.Position", 
@@ -103,6 +99,10 @@ SaveToINI.Push("Settings.SplashScreen", "Settings.BTDetect",
             "OSDSettings.Speed", "General.BTDetect", "General.WheelSpeed",
             "General.gainStepsMin", "General.gainStepsMax"
 )
-RegisterArrayItems(SaveToINI)
-LoadINI()
+if App.HasOwnProp("GitHubRepo")
+	SaveToINI.Push("App.UpdateAuto", "App.UpdateFrequencyDays", "App.UpdateLastCheck")
+if (IsSet(INIManager) && (SaveToINI != [])) {
+	IsSet(RegisterArrayItems) ? RegisterArrayItems(SaveToINI) : 0
+	IsSet(LoadINI) ? LoadINI() : 0
+}
 ;@endregion

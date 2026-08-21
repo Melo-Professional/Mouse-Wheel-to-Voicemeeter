@@ -1,8 +1,8 @@
 /************************************************************************
  * @description Automatic Backup and Compilation Manager for AHK v2.
  * @author Melo (melo@meloprofessional.com) and Pj
- * @date 2026/07/30
- * @version 1.6.0
+ * @date 2026/08/18
+ * @version 1.7.0
  * 
  * FEATURES:
  * - Creates an isolated '.versions\' directory automatically inside A_ScriptDir.
@@ -104,10 +104,7 @@ Backup() {
         }
     }
 
-    ToolTip("`n`n"
-        "          Backup starting          `n"
-        "          " scriptname " - " AppVersion "          `n`n"
-        " ",,,20)
+	Notify("🔴 Backup starting", true)
 
     ; -------------------------------------------------------------------
     ; Setup target paths
@@ -255,10 +252,51 @@ Backup() {
             DirDelete(targetDir, 1)
         }
     }
-    
-    ToolTip("`n`n"
-        "          Backup created          `n"
-        "          " scriptname " - " AppVersion "          `n`n"
-        " ",,,20)
-    SetTimer(() => ToolTip(,,,20), -7000)
+
+	Notify("💾 Backup created")
+
+	Notify( msg, permanent := false) {
+		if IsFunctionDefined("OSDCustom") {
+			Static BackupOSD := %"OSDCustom"%()
+
+			if BackupOSD.IsVisible {
+				BackupOSD.UpdateTextObject( version, "v" Appversion)
+				BackupOSD.UpdateTextObject( wait, "done")
+				BackupOSD.UpdateTextObject( info, msg)
+				BackupOSD := 0
+				return
+			}
+
+			BackupOSD.FontSize			:= 14
+			BackupOSD.MarginX			:= 30
+			BackupOSD.MarginY			:= 30
+			BackupOSD.TimeOut			:= 7000
+			BackupOSD.Position			:= "x0.5 y0.83"
+
+			static info := BackupOSD.SetCellText( 1, 1, msg, "Center")
+			BackupOSD.SetCellText( 1, 3, scriptname, "Center", {FontSize: 10, FontColor: "CCCCCC", FontWeight: 100 })
+			static version := BackupOSD.SetCellText( 1, 4, " ", "Center", {FontSize: 12, FontColor: "CCCCCC", FontWeight: 100 })
+			static wait := BackupOSD.SetCellText( 1, 5, "wait...", "Right", {FontSize: 10, FontColor: "CCCCCC", FontWeight: 100 })
+			BackupOSD.Show()
+		} else {
+			if permanent {
+
+				ToolTip("`n`n"
+						"          " msg "          `n"
+						"          " scriptname " - " AppVersion "          `n`n"
+						" ",,,20)
+			} else {
+				ToolTip("`n`n"
+					"          " msg "          `n"
+					"          " scriptname " - " AppVersion "          `n`n"
+					" ",,,20)
+				SetTimer(() => ToolTip(,,,20), -7000)
+			}
+		}
+	}
+
+	IsFunctionDefined(FunctionName) {
+        try return HasMethod(%FunctionName%)
+        return false
+    }
 }

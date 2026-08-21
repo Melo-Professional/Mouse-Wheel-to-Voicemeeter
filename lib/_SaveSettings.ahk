@@ -1,8 +1,8 @@
 /************************************************************************
  * @description Handles user settings utilizing a standard INI file
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/07/12
- * @version 1.6.0
+ * @date 2026/08/16
+ * @version 1.7.0
  ***********************************************************************/
 
 #Requires AutoHotkey v2.0
@@ -27,8 +27,21 @@ SaveINI()
 */
 
 class INIManager {
-    static IniPath := A_ScriptDir "\" App.NameNoSpace "_UserSettings.ini"
+	static App := Map()
+    static IniPath := ""
     static Registered := Map()
+
+    static __New() {
+        if IsSet(App) && HasProp(App, "NameNoSpace") && App.NameNoSpace != "" {
+            this.App := App
+        } else {
+            ; Fallback: strip extension from A_ScriptName
+            SplitPath(A_ScriptName,,,,&scriptNameNoExt)
+            this.App := {NameNoSpace: scriptNameNoExt}
+        }
+
+        this.IniPath := A_ScriptDir "\" this.App.NameNoSpace "_UserSettings.ini"
+    }
 
     static Register(rootName, path) {
         if (!this.Registered.Has(rootName))

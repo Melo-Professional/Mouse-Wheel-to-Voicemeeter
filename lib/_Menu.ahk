@@ -65,17 +65,23 @@ StartMenu() {
     }
     
     ; 3.1 Check for Updates
-    if IsSet(AutoUpdater) && App.HasOwnProp("Github") && App.Github != "" && App.Github != "https://github.com/Melo-Professional/" {
+    if IsSet(AutoUpdater) && App.HasOwnProp("GitHubRepo") {
         MoreMenu.Add("Update...", (*) => %"Updater"%.ShowUpdaterGUI())
     }
+    
 
     ; 4. Check for About GUI function
     if IsFunctionDefined("ShowAboutGUI") {
         MoreMenu.Add("About", (*) => %"ShowAboutGUI"%())
     }
+
     TrayMenu.Insert("Exit", "More", MoreMenu)
-    ;TrayMenu.Add("Restart", (*) => Reload())
-    TrayMenu.Insert("Exit", "Restart", (*) => ReloadClean())
+
+    if IsFunctionDefined("ReloadClean") {
+        TrayMenu.Insert("Exit", "Restart", (*) => %"ReloadClean"%())
+    } else {
+        TrayMenu.Insert("Exit", "Restart", (*) => Reload())
+	}
 
     SettingsLoadStartOnBoot(appName) ? MoreMenu.Check("Start on Boot") : ""
 

@@ -1,36 +1,27 @@
 /************************************************************************
- * @description About GUI (Cleaned up with GuiTracker & Native Move)
+ * @description About GUI
  * @author Melo (melo@meloprofessional.com)
- * @date 2026/08/14
- * @version 1.8.1
+ * @date 2026/08/16
+ * @version 1.9.0
  ***********************************************************************/
 
 #Requires AutoHotkey v2.0
 
-ShowAboutGUI() {
+ShowAboutGUI(*) {
+	static MyGui := ""
+
+	if MyGui
+		return WinActivate(MyGui)
+
     MyGuiTitle := "About"
     MyGuiOptions := "+LastFound -SysMenu"
+    MyGuiOptions := "+LastFound -Caption"
     MyGui := Gui(MyGuiOptions, MyGuiTitle)
     MyGui.SetFont("s" Settings.GuiFontSizeMedium, Settings.GuiFontName)
 	DllCall("dwmapi\DwmSetWindowAttribute", "Ptr", MyGui.Hwnd, "UInt", 33, "Int*", 2, "UInt", 4)
-    offset := 5
 
-    if IsFunctionDefined("CustomTitleBar") {
-        MyGui.Opt("-Caption")
-        %"CustomTitleBar"%.Attach(MyGui, {
-            Title: "",
-            ShowIcon: false,
-            Min: false,
-            Max: false,
-            Close: false
-        })
-        offset := 40
-    }
-
-    UseAcrylicGUI := IsFunctionDefined("FrostedTheme")
-    if UseAcrylicGUI
-        offset := 30
-
+    UseAcrylicGUI := IsSet(FrostedTheme)
+	
     ; Color Constants
 	TextNormalColor				:= Settings.Theme.%CurrentActualTheme%.TextSmooth
 	TextHoverColor				:= Settings.Theme.%CurrentActualTheme%.TextDefault
@@ -50,16 +41,16 @@ ShowAboutGUI() {
 
     ; Layout
     GuiWidth      := 460
-    BtnWidth      := 80
+    BtnWidth      := 100
     MyGui.MarginX := 40
     MyGui.MarginY := 30
 
     ; 1. Icon
     try {
-        MyGui.Add("Picture", "xm y" offset " w64 h-1", App.Icon)
+        MyGui.Add("Picture", "xm y" MyGui.MarginY " w64 h-1", App.Icon)
     } catch {
         MyGui.SetFont("s22 w500")
-        MyGui.Add("Text", "xm y" offset " w64 h64", "[ i ]")
+        MyGui.Add("Text", "xm y" MyGui.MarginY " w64 h64", "[ i ]")
     }
 
     ; 2. Title and Version
@@ -131,15 +122,11 @@ ShowAboutGUI() {
 
     ; Apply Themes
     if UseAcrylicGUI {
-        if IsFunctionDefined("ApplyThemeToGui")
-            %"ApplyThemeToGui"%(MyGui, "Dark")
-        if IsFunctionDefined("FrostedTheme")
-            %"FrostedTheme"%.Apply(MyGui)
+        IsSet(ApplyThemeToGui) ? ApplyThemeToGui(MyGui, "Dark") : 0
+        IsSet(FrostedTheme) ? FrostedTheme.Apply(MyGui) : 0
     } else {
-        if IsFunctionDefined("ApplyThemeToGui") {
-            %"ApplyThemeToGui"%(MyGui)
-            %"WatchedGUIs"%.Push(MyGui)
-        }
+        IsSet(ApplyThemeToGui) ? ApplyThemeToGui(MyGui) : 0
+        IsSet(WatchedGUIs) ? WatchedGUIs.Push(MyGui) : 0
     }
 
     MyGui.Show()
@@ -183,15 +170,8 @@ ShowAboutGUI() {
         } else {
             OnMessage(0x0201, WM_LBUTTONDOWN, 0)
         }
-
-        if IsFunctionDefined("RemoveGuiFromArray")
-            %"RemoveGuiFromArray"%(MyGui)
-
+        IsSet(RemoveGuiFromArray) ? RemoveGuiFromArray(MyGui) : 0
         MyGui.Destroy()
-    }
-
-	IsFunctionDefined(Name) {
-        try return HasMethod(%Name%)
-        return false
+		MyGui := ""
     }
 }
